@@ -5,4 +5,5 @@ panorama_output_*/
 *.jpeg
 test/
 mapping_demo_20250916_150339/
+/_pycache_/
 
