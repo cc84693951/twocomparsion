@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-全景图处理器 - 合并版本 (CUDA加速)
+全景图处理器 - 优化版本 (CUDA加速)
 功能：
 1. 全景图分割为立方体贴图
 2. 立方体贴图重建全景图  
 3. 随机生成检测框并映射坐标
 4. 输出处理结果图片
 5. CUDA GPU加速支持
+6. 多种测试模式支持
 
 CUDA优化说明：
 - 全景图到立方体贴图转换：GPU并行处理所有像素坐标转换和双线性插值
@@ -16,6 +17,11 @@ CUDA优化说明：
 - 双线性插值：GPU加速的高精度插值计算
 - 自动回退：如果CuPy不可用或GPU初始化失败，自动使用CPU版本
 
+优化特性：
+- 支持多种测试模式（直接重建、坐标记录等）
+- 增强的检测框记录功能
+- 改进的内存管理和错误处理
+- 更好的输出文件组织和汇总
 
 依赖要求：
 - CuPy (pip install cupy-cuda11x 或 cupy-cuda12x，根据CUDA版本选择)
@@ -115,18 +121,30 @@ class PanoramaProcessor:
         if self.use_cuda:
             try:
                 cp.cuda.Device(0).use()  # 使用第一个GPU
-            except Exception:
+                print("CUDA GPU加速已启用")
+            except Exception as e:
+                print(f"CUDA初始化失败，将使用CPU模式: {e}")
                 self.use_cuda = False
+        else:
+            if not CUDA_AVAILABLE:
+                print("CuPy未安装，将使用CPU模式")
+            else:
+                print("手动禁用CUDA，将使用CPU模式")
     
     def process_panorama(self, input_path, output_dir=None, cube_size=1024, 
-                        num_random_boxes=8, min_box_size=50, max_box_size=200):
+                        num_random_boxes=8, min_box_size=50, max_box_size=200,
+                        test_mode=1):
         """
         完整的全景图处理流程 (CUDA加速)
-        """        
+        test_mode: 1 = 直接在立方体面绘制后重建, 2 = 记录中心和尺寸在全景图坐标
+        """
+        print(f"开始处理全景图: {os.path.basename(input_path)}")
+        print(f"使用模式: {'CUDA GPU' if self.use_cuda else 'CPU'}")
+        
         # 创建输出目录
         if output_dir is None:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_dir = f"panorama_output_{timestamp}"
+            output_dir = f"panorama_output_optimal_{timestamp}"
         os.makedirs(output_dir, exist_ok=True)
         
         # GPU内存管理
@@ -141,35 +159,69 @@ class PanoramaProcessor:
         if original_panorama is None:
             raise ValueError(f"无法读取图像: {input_path}")
         
+        print(f"原图尺寸: {original_panorama.shape[1]}x{original_panorama.shape[0]}")
+        
         # 步骤1: 全景图转换为立方体贴图
+        print("步骤1: 全景图 → 立方体贴图")
         faces = self._panorama_to_cubemap(original_panorama, cube_size)
         
         # 保存原始立方体面
         self._save_cube_faces(faces, output_dir, "original")
         
         # 步骤2: 生成随机检测框
+        print("步骤2: 生成随机检测框")
         detections = self._generate_random_detections(
             cube_size, num_random_boxes, min_box_size, max_box_size
         )
         
         # 步骤3: 在立方体面上绘制检测框
+        print("步骤3: 绘制检测框")
         faces_with_boxes = self._draw_detections_on_faces(faces, detections)
         
         # 保存带检测框的立方体面
         self._save_cube_faces(faces_with_boxes, output_dir, "with_boxes")
         
-        # 步骤4: 直接在原图上映射检测框（避免重建带来的像素损失）
         panorama_width, panorama_height = original_panorama.shape[1], original_panorama.shape[0]
-        panorama_with_mapped_boxes = self._map_detections_to_panorama(
-            original_panorama, detections, cube_size, panorama_width, panorama_height
-        )
         
-        # 步骤5: 可选的重建全景图（用于质量对比）
-        reconstructed_panorama = self._cubemap_to_panorama_improved(faces, panorama_width, panorama_height)
-        
-        # 保存重建的全景图
-        reconstructed_path = os.path.join(output_dir, 'reconstructed_panorama.jpg')
-        cv2.imwrite(reconstructed_path, reconstructed_panorama)
+        if test_mode == 1:
+            # 测试1: 直接在立方体面绘制检测框，然后重建全景图
+            print("步骤4: 测试1 - 从带检测框的立方体面重建全景图")
+            reconstructed_panorama = self._cubemap_to_panorama_improved(faces_with_boxes, panorama_width, panorama_height)
+            panorama_with_mapped_boxes = reconstructed_panorama
+            
+            # 保存重建的全景图
+            reconstructed_path = os.path.join(output_dir, 'reconstructed_panorama_with_boxes.jpg')
+            cv2.imwrite(reconstructed_path, reconstructed_panorama)
+            
+        elif test_mode == 2:
+            # 测试2: 记录检测框在全景图中的中心和尺寸
+            print("步骤4: 测试2 - 记录检测框中心和尺寸")
+            reconstructed_panorama, detection_records = self._cubemap_to_panorama_with_detection_recording(
+                faces, detections, cube_size, panorama_width, panorama_height
+            )
+            panorama_with_mapped_boxes = self._map_detections_to_panorama(
+                original_panorama, detections, cube_size, panorama_width, panorama_height
+            )
+            
+            # 保存检测记录
+            detection_records_path = os.path.join(output_dir, 'detection_records.json')
+            with open(detection_records_path, 'w', encoding='utf-8') as f:
+                json.dump(detection_records, f, indent=2, ensure_ascii=False)
+            
+            # 保存重建的全景图
+            reconstructed_path = os.path.join(output_dir, 'reconstructed_panorama.jpg')
+            cv2.imwrite(reconstructed_path, reconstructed_panorama)
+        else:
+            # 默认模式：直接映射检测框到原图
+            print("步骤4: 默认模式 - 直接映射检测框到原图")
+            reconstructed_panorama = self._cubemap_to_panorama_improved(faces, panorama_width, panorama_height)
+            panorama_with_mapped_boxes = self._map_detections_to_panorama(
+                original_panorama, detections, cube_size, panorama_width, panorama_height
+            )
+            
+            # 保存重建的全景图
+            reconstructed_path = os.path.join(output_dir, 'reconstructed_panorama.jpg')
+            cv2.imwrite(reconstructed_path, reconstructed_panorama)
         
         # 保存映射后的全景图
         mapped_path = os.path.join(output_dir, 'panorama_with_mapped_boxes.jpg')
@@ -181,7 +233,7 @@ class PanoramaProcessor:
             json.dump(detections, f, indent=2, ensure_ascii=False)
         
         # 创建结果汇总
-        self._create_summary(output_dir, input_path, cube_size, detections)
+        self._create_summary(output_dir, input_path, cube_size, detections, test_mode)
         
         # GPU内存清理
         if self.use_cuda:
@@ -190,6 +242,7 @@ class PanoramaProcessor:
             except Exception:
                 pass
         
+        print(f"处理完成！结果保存在: {output_dir}")
         return output_dir, detections
     
     def _panorama_to_cubemap(self, panorama_img, cube_size):
@@ -252,7 +305,7 @@ class PanoramaProcessor:
         return faces
     
     def _panorama_to_cubemap_cpu(self, panorama_img, cube_size, height, width):
-        """CPU版本的全景图转换 (原始实现)"""
+        """CPU版本的全景图转换 (优化实现)"""
         faces = {}
         
         for i, face_name in enumerate(tqdm(self.face_names, desc="CPU转换立方体面")):
@@ -290,7 +343,8 @@ class PanoramaProcessor:
                     
                     # 边界检查和像素采样
                     if 0 <= u < width and 0 <= v < height:
-                        face_img[row, col] = panorama_img[int(v), int(u)]
+                        # 使用改进的双线性插值
+                        face_img[row, col] = self._bilinear_interpolate_improved(panorama_img, u, v)
             
             faces[face_name] = face_img
         
@@ -399,7 +453,7 @@ class PanoramaProcessor:
         return panorama
     
     def _cubemap_to_panorama_cpu(self, faces, output_width, output_height, cube_size):
-        """CPU版本的立方体贴图重建全景图 (原始实现)"""
+        """CPU版本的立方体贴图重建全景图 (优化实现)"""
         panorama = np.zeros((output_height, output_width, 3), dtype=np.uint8)
         
         for v in tqdm(range(output_height), desc="CPU重建全景图"):
@@ -422,6 +476,66 @@ class PanoramaProcessor:
                     panorama[v, u] = pixel_value
         
         return panorama
+    
+    def _cubemap_to_panorama_with_detection_recording(self, faces, detections, cube_size, output_width, output_height):
+        """重建全景图同时记录检测框的中心和尺寸信息 - CUDA加速版本"""
+        detection_records = {}
+        
+        # 为每个检测框创建记录
+        for face_name, bboxes in detections.items():
+            detection_records[face_name] = []
+            for i, bbox in enumerate(bboxes):
+                x1, y1, x2, y2 = bbox
+                
+                # 计算立方体面上的中心点
+                face_center_x = (x1 + x2) / 2
+                face_center_y = (y1 + y2) / 2
+                face_width = x2 - x1
+                face_height = y2 - y1
+                
+                # 将中心点映射到全景图坐标
+                panorama_center = self._face_coord_to_panorama(
+                    face_center_x, face_center_y, face_name, cube_size, output_width, output_height
+                )
+                
+                if panorama_center:
+                    # 计算在全景图中的近似尺寸
+                    # 映射检测框的四个角点来估算尺寸
+                    corners = [
+                        self._face_coord_to_panorama(x1, y1, face_name, cube_size, output_width, output_height),
+                        self._face_coord_to_panorama(x2, y1, face_name, cube_size, output_width, output_height),
+                        self._face_coord_to_panorama(x2, y2, face_name, cube_size, output_width, output_height),
+                        self._face_coord_to_panorama(x1, y2, face_name, cube_size, output_width, output_height)
+                    ]
+                    
+                    valid_corners = [c for c in corners if c is not None]
+                    if len(valid_corners) >= 4:
+                        u_coords = [c[0] for c in valid_corners]
+                        v_coords = [c[1] for c in valid_corners]
+                        
+                        panorama_width = max(u_coords) - min(u_coords)
+                        panorama_height = max(v_coords) - min(v_coords)
+                        
+                        # 处理跨越边界的情况
+                        if panorama_width > output_width * 0.5:
+                            panorama_width = output_width - panorama_width
+                        
+                        detection_record = {
+                            'bbox_id': f'{face_name}-{i+1}',
+                            'face_name': face_name,
+                            'original_bbox': [x1, y1, x2, y2],
+                            'panorama_center': panorama_center,
+                            'panorama_size': [panorama_width, panorama_height],
+                            'face_center': [face_center_x, face_center_y],
+                            'face_size': [face_width, face_height]
+                        }
+                        
+                        detection_records[face_name].append(detection_record)
+        
+        # 重建全景图 (使用CUDA加速版本)
+        panorama = self._cubemap_to_panorama_improved(faces, output_width, output_height)
+        
+        return panorama, detection_records
     
     def _cuda_xyz_to_panorama_batch(self, x, y, z, faces_gpu, cube_size, panorama_gpu):
         """CUDA批量处理3D坐标到全景图的映射"""
@@ -561,28 +675,8 @@ class PanoramaProcessor:
         
         return face_name, face_u, face_v
     
-    def _bilinear_interpolate(self, img, x, y):
-        """双线性插值"""
-        h, w = img.shape[:2]
-        
-        x = max(0, min(x, w - 1))
-        y = max(0, min(y, h - 1))
-        
-        x1, y1 = int(math.floor(x)), int(math.floor(y))
-        x2, y2 = min(x1 + 1, w - 1), min(y1 + 1, h - 1)
-        
-        dx = x - x1
-        dy = y - y1
-        
-        pixel = (1 - dx) * (1 - dy) * img[y1, x1] + \
-                dx * (1 - dy) * img[y1, x2] + \
-                (1 - dx) * dy * img[y2, x1] + \
-                dx * dy * img[y2, x2]
-        
-        return pixel.astype(np.uint8)
-    
     def _bilinear_interpolate_improved(self, img, x, y):
-        """改进的双线性插值 - CUDA加速版本"""
+        """改进的双线性插值 - 支持CUDA和CPU自动切换"""
         if self.use_cuda and hasattr(img, 'shape') and len(img.shape) >= 2:
             # 如果是numpy数组且使用CUDA，转换到GPU
             if isinstance(img, np.ndarray):
@@ -1081,53 +1175,102 @@ class PanoramaProcessor:
             face_path = os.path.join(faces_dir, filename)
             cv2.imwrite(face_path, face_img)
     
-    def _create_summary(self, output_dir, input_path, cube_size, detections):
+    def _create_summary(self, output_dir, input_path, cube_size, detections, test_mode):
         """创建处理结果汇总"""
+        test_mode_description = {
+            1: "直接在立方体面绘制后重建",
+            2: "记录中心和尺寸在全景图坐标"
+        }
+        
         summary = {
             'input_file': os.path.basename(input_path),
             'processing_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'processing_mode': 'CUDA GPU' if self.use_cuda else 'CPU',
+            'test_mode': test_mode,
+            'test_mode_description': test_mode_description.get(test_mode, "默认模式"),
             'cube_size': cube_size,
             'total_detections': sum(len(boxes) for boxes in detections.values()),
             'detections_by_face': {face: len(boxes) for face, boxes in detections.items()},
             'output_files': {
                 'cube_faces_original': 'cube_faces_original/',
                 'cube_faces_with_boxes': 'cube_faces_with_boxes/',
-                'reconstructed_panorama': 'reconstructed_panorama.jpg',
-                'panorama_with_mapped_boxes': 'panorama_with_mapped_boxes.jpg',
                 'detection_info': 'detection_info.json'
             }
         }
+        
+        # 根据测试模式添加不同的输出文件
+        if test_mode == 1:
+            summary['output_files']['reconstructed_panorama_with_boxes'] = 'reconstructed_panorama_with_boxes.jpg'
+        elif test_mode == 2:
+            summary['output_files']['reconstructed_panorama'] = 'reconstructed_panorama.jpg'
+            summary['output_files']['detection_records'] = 'detection_records.json'
+        else:
+            summary['output_files']['reconstructed_panorama'] = 'reconstructed_panorama.jpg'
+        
+        summary['output_files']['panorama_with_mapped_boxes'] = 'panorama_with_mapped_boxes.jpg'
         
         summary_path = os.path.join(output_dir, 'processing_summary.json')
         with open(summary_path, 'w', encoding='utf-8') as f:
             json.dump(summary, f, indent=2, ensure_ascii=False)
 
 def main():
-    """主函数 - CUDA加速版本"""
+    """主函数 - 优化CUDA加速版本"""
     input_image = os.path.join("test", "20250910163759_0001_V.jpeg")
     
     if not os.path.exists(input_image):
+        print(f"错误: 找不到文件 {input_image}")
         return
     
     try:
         processor = PanoramaProcessor(use_cuda=True)
         
+        # 处理参数
         cube_size = 1024
-        num_random_boxes = 12
+        num_random_boxes = 12  # 随机生成12个检测框
         min_box_size = 80
         max_box_size = 250
         
-        output_dir, detections = processor.process_panorama(
-            input_path=input_image,
-            cube_size=cube_size,
-            num_random_boxes=num_random_boxes,
-            min_box_size=min_box_size,
-            max_box_size=max_box_size
-        )
+        # 测试两种模式
+        test_modes = [1, 2]  # 1=直接重建, 2=记录坐标
+        
+        for test_mode in test_modes:
+            print(f"\n{'='*50}")
+            print(f"开始测试模式 {test_mode}")
+            print(f"{'='*50}")
+            
+            # 执行处理
+            output_dir, detections = processor.process_panorama(
+                input_path=input_image,
+                cube_size=cube_size,
+                num_random_boxes=num_random_boxes,
+                min_box_size=min_box_size,
+                max_box_size=max_box_size,
+                test_mode=test_mode
+            )
+            
+            print(f"测试模式 {test_mode} 完成！输出目录: {output_dir}")
+        
+        print(f"\n所有测试完成！")
+        print(f"生成的检测框数量: {sum(len(boxes) for boxes in detections.values())}")
+        print("测试说明:")
+        print("  测试1: 直接在立方体面绘制检测框后重建 - 避免坐标映射操作")
+        print("  测试2: 记录检测框在全景图中的中心和尺寸信息")
+        print("\n共同输出文件:")
+        print("  - cube_faces_original/: 原始立方体面")
+        print("  - cube_faces_with_boxes/: 带检测框的立方体面")
+        print("  - panorama_with_mapped_boxes.jpg: 映射检测框的全景图")
+        print("  - detection_info.json: 检测框信息")
+        print("  - processing_summary.json: 处理汇总")
+        print("\n测试1特有输出:")
+        print("  - reconstructed_panorama_with_boxes.jpg: 从带框立方体面重建的全景图")
+        print("\n测试2特有输出:")
+        print("  - reconstructed_panorama.jpg: 重建的全景图")
+        print("  - detection_records.json: 检测框坐标记录")
         
     except Exception as e:
+        print(f"错误: {e}")
         import traceback
         traceback.print_exc()
 
 if __name__ == "__main__":
-    main()
+    main() 
