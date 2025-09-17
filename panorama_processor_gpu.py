@@ -229,7 +229,7 @@ class PanoramaProcessor:
             elif i == 4:  # top
                 x3d, y3d, z3d = x, cp.ones_like(x), y
             elif i == 5:  # bottom
-                x3d, y3d, z3d = x, -cp.ones_like(x), -y
+                x3d, y3d, z3d = x, -cp.ones_like(x), y
             
             # 转换为球面坐标 (GPU向量化计算)
             r = cp.sqrt(x3d*x3d + y3d*y3d + z3d*z3d)
@@ -276,7 +276,7 @@ class PanoramaProcessor:
                     elif i == 4:  # top
                         xyz = [x, 1.0, y]
                     elif i == 5:  # bottom
-                        xyz = [x, -1.0, -y]
+                        xyz = [x, -1.0, y]
                     
                     # 转换为球面坐标
                     x3d, y3d, z3d = xyz
@@ -475,7 +475,7 @@ class PanoramaProcessor:
         bottom_mask = (abs_y >= abs_x) & (abs_y >= abs_z) & (y <= 0)
         if cp.any(bottom_mask):
             face_u = (x / (-y) + 1) * 0.5 * cube_size
-            face_v = (-z / (-y) + 1) * 0.5 * cube_size
+            face_v = (z / (-y) + 1) * 0.5 * cube_size
             face_masks['bottom'] = bottom_mask
             face_coords['bottom'] = (face_u, face_v)
         
@@ -557,7 +557,7 @@ class PanoramaProcessor:
             else:  # bottom
                 face_name = 'bottom'
                 face_u = (x / (-y) + 1) * 0.5 * cube_size
-                face_v = (-z / (-y) + 1) * 0.5 * cube_size
+                face_v = (z / (-y) + 1) * 0.5 * cube_size
         
         return face_name, face_u, face_v
     
@@ -924,7 +924,7 @@ class PanoramaProcessor:
         elif face_index == 4:  # top
             x3d, y3d, z3d = x, cp.ones_like(x), y
         elif face_index == 5:  # bottom
-            x3d, y3d, z3d = x, -cp.ones_like(x), -y
+            x3d, y3d, z3d = x, -cp.ones_like(x), y
         
         # 转换为球面坐标 (GPU向量化计算)
         r = cp.sqrt(x3d*x3d + y3d*y3d + z3d*z3d)
@@ -1056,7 +1056,7 @@ class PanoramaProcessor:
         elif face_index == 4:  # top
             xyz = [x, 1.0, y]
         elif face_index == 5:  # bottom
-            xyz = [x, -1.0, -y]
+            xyz = [x, -1.0, y]
         
         x3d, y3d, z3d = xyz
         
