@@ -72,8 +72,9 @@ class ResultMapper:
                         inverse_matrix = cv2.invert(transform_matrix)[1]
                         
                         # 映射检测框
+                        face_shape = original_faces[face_name].shape[:2]
                         mapped_detections = self._map_detections_with_inverse_transform(
-                            change_result['detections'], inverse_matrix
+                            change_result['detections'], inverse_matrix, face_shape
                         )
                     except Exception as e:
                         logging.warning(f"逆变换失败 {face_name}: {e}, 使用原始坐标")
@@ -100,13 +101,15 @@ class ResultMapper:
         return mapped_results
     
     def _map_detections_with_inverse_transform(self, detections: List[Dict[str, Any]], 
-                                             inverse_matrix: np.ndarray) -> List[Dict[str, Any]]:
+                                             inverse_matrix: np.ndarray,
+                                             face_shape: Tuple[int, int]) -> List[Dict[str, Any]]:
         """
         使用逆变换矩阵映射检测结果
         
         Args:
             detections: 检测结果列表
             inverse_matrix: 逆变换矩阵
+            face_shape: 立方体面的形状 (height, width)
             
         Returns:
             映射后的检测结果列表
@@ -133,9 +136,23 @@ class ResultMapper:
             min_y = int(np.min(mapped_corners[:, 1]))
             max_y = int(np.max(mapped_corners[:, 1]))
             
+            # 获取立方体面尺寸进行边界检查
+            face_height, face_width = face_shape
+            
+            # 边界检查和裁剪
+            min_x = max(0, min_x)
+            min_y = max(0, min_y)
+            max_x = min(face_width, max_x)
+            max_y = min(face_height, max_y)
+            
+            # 确保边界框有效
+            if max_x <= min_x or max_y <= min_y:
+                logging.warning(f"检测框映射后无效，跳过: min_x={min_x}, max_x={max_x}, min_y={min_y}, max_y={max_y}")
+                continue
+            
             mapped_bbox = [
-                max(0, min_x),
-                max(0, min_y),
+                min_x,
+                min_y,
                 max_x - min_x,
                 max_y - min_y
             ]
@@ -173,6 +190,8 @@ class ResultMapper:
             (255, 0, 255), (0, 255, 255), (128, 255, 0), (255, 128, 0)
         ]
         
+        face_height, face_width = original_face.shape[:2]
+        
         for i, detection in enumerate(mapped_detections):
             color = colors[i % len(colors)]
             confidence = detection['confidence']
@@ -180,6 +199,10 @@ class ResultMapper:
             # 如果有映射的角点，绘制多边形；否则绘制矩形
             if 'mapped_corners' in detection:
                 corners = np.array(detection['mapped_corners'], dtype=np.int32)
+                
+                # 边界检查：裁剪超出边界的角点
+                corners[:, 0] = np.clip(corners[:, 0], 0, face_width - 1)
+                corners[:, 1] = np.clip(corners[:, 1], 0, face_height - 1)
                 
                 # 绘制半透明填充
                 cv2.fillPoly(overlay, [corners], color)
@@ -189,30 +212,50 @@ class ResultMapper:
             else:
                 # 传统矩形绘制
                 x, y, w, h = detection['bbox']
-                cv2.rectangle(overlay, (x, y), (x + w, y + h), color, -1)
-                cv2.rectangle(vis_image, (x, y), (x + w, y + h), color, 3)
+                
+                # 边界检查和裁剪
+                x = max(0, min(x, face_width - 1))
+                y = max(0, min(y, face_height - 1))
+                x2 = max(0, min(x + w, face_width))
+                y2 = max(0, min(y + h, face_height))
+                
+                # 确保矩形有效
+                if x2 > x and y2 > y:
+                    cv2.rectangle(overlay, (x, y), (x2, y2), color, -1)
+                    cv2.rectangle(vis_image, (x, y), (x2, y2), color, 3)
             
             # 添加标签
             center = detection['center']
+            
+            # 边界检查中心点
+            center_x = max(0, min(center[0], face_width - 1))
+            center_y = max(0, min(center[1], face_height - 1))
+            
             label = f'ID:{detection["id"]} ({confidence:.2f})'
             
             text_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
-            label_bg_x1 = center[0] - text_size[0] // 2 - 5
-            label_bg_y1 = center[1] - text_size[1] // 2 - 5
-            label_bg_x2 = center[0] + text_size[0] // 2 + 5
-            label_bg_y2 = center[1] + text_size[1] // 2 + 5
+            label_bg_x1 = max(0, center_x - text_size[0] // 2 - 5)
+            label_bg_y1 = max(0, center_y - text_size[1] // 2 - 5)
+            label_bg_x2 = min(face_width, center_x + text_size[0] // 2 + 5)
+            label_bg_y2 = min(face_height, center_y + text_size[1] // 2 + 5)
             
-            cv2.rectangle(vis_image, 
-                        (label_bg_x1, label_bg_y1), 
-                        (label_bg_x2, label_bg_y2), 
-                        (0, 0, 0), -1)
-            cv2.rectangle(vis_image, 
-                        (label_bg_x1, label_bg_y1), 
-                        (label_bg_x2, label_bg_y2), 
-                        color, 2)
+            # 确保标签背景有效
+            if label_bg_x2 > label_bg_x1 and label_bg_y2 > label_bg_y1:
+                cv2.rectangle(vis_image, 
+                            (label_bg_x1, label_bg_y1), 
+                            (label_bg_x2, label_bg_y2), 
+                            (0, 0, 0), -1)
+                cv2.rectangle(vis_image, 
+                            (label_bg_x1, label_bg_y1), 
+                            (label_bg_x2, label_bg_y2), 
+                            color, 2)
             
+                # 调整文本位置确保在边界内
+                text_x = max(text_size[0] // 2, min(center_x, face_width - text_size[0] // 2))
+                text_y = max(text_size[1] // 2, min(center_y + text_size[1] // 2, face_height - 5))
+                
             cv2.putText(vis_image, label, 
-                      (center[0] - text_size[0] // 2, center[1] + text_size[1] // 2), 
+                          (text_x - text_size[0] // 2, text_y), 
                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         # 融合半透明效果
@@ -239,25 +282,21 @@ class ResultMapper:
         """
         logging.info(f"开始重建全景图，尺寸: {output_width}x{output_height}")
         
-        # 创建包含检测框的立方体面
-        faces_with_detections = {}
+        # 使用原始立方体面（不包含检测框和标签）
+        faces_for_reconstruction = {}
         for face_name in self.face_names:
             if face_name in cube_faces:
-                if face_name in mapped_results:
-                    # 使用包含检测框的可视化图像
-                    faces_with_detections[face_name] = mapped_results[face_name]['visualization']
-                else:
-                    # 使用原始图像
-                    faces_with_detections[face_name] = cube_faces[face_name]
+                # 始终使用原始图像，不使用包含ID和置信度的可视化图像
+                faces_for_reconstruction[face_name] = cube_faces[face_name]
         
         # 重建全景图
         if self.config.reconstruction_method == "improved":
             panorama = self._reconstruct_panorama_improved(
-                faces_with_detections, output_width, output_height
+                faces_for_reconstruction, output_width, output_height
             )
         else:
             panorama = self._reconstruct_panorama_basic(
-                faces_with_detections, output_width, output_height
+                faces_for_reconstruction, output_width, output_height
             )
         
         logging.info("全景图重建完成")
@@ -501,7 +540,7 @@ class ResultMapper:
                                            mapped_results: Dict[str, Dict[str, Any]],
                                            cube_size: int) -> np.ndarray:
         """
-        在全景图上创建检测结果摘要标注
+        在全景图上创建检测结果摘要标注（简洁的标记点代替复杂的检测框）
         
         Args:
             panorama: 重建的全景图
@@ -509,40 +548,313 @@ class ResultMapper:
             cube_size: 立方体尺寸
             
         Returns:
-            带有摘要标注的全景图
+            带有检测标记的全景图
         """
         annotated_panorama = panorama.copy()
+        panorama_height, panorama_width = panorama.shape[:2]
         
-        # 计算总检测数量
+        # 计算总检测数量和记录详细信息
         total_detections = sum(len(result['detections']) for result in mapped_results.values())
         
-        if total_detections == 0:
-            # 添加"无变化"标注
-            cv2.putText(annotated_panorama, "No Changes Detected", 
-                       (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
-            return annotated_panorama
+        # 详细日志记录
+        logging.info("=" * 60)
+        logging.info("全景图检测结果摘要:")
+        logging.info(f"  全景图尺寸: {panorama_width} x {panorama_height}")
+        logging.info(f"  立方体面尺寸: {cube_size} x {cube_size}")
+        logging.info(f"  总检测数量: {total_detections}")
         
-        # 在全景图上标注检测摘要
-        y_offset = 50
-        line_height = 40
-        
-        # 总体信息
-        cv2.putText(annotated_panorama, f"Total Changes: {total_detections}", 
-                   (50, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2)
-        y_offset += line_height
-        
-        # 各面的检测数量
         for face_name, result in mapped_results.items():
             if result['detections']:
-                count = len(result['detections'])
-                face_desc = {'front': 'Front', 'back': 'Back', 'left': 'Left', 
-                           'right': 'Right', 'top': 'Top', 'bottom': 'Bottom'}.get(face_name, face_name)
+                logging.info(f"  {face_name} 面: {len(result['detections'])} 个检测")
+                for i, detection in enumerate(result['detections']):
+                    bbox = detection['bbox']
+                    confidence = detection['confidence']
+                    area = detection.get('area', 0)
+                    logging.info(f"    检测{i+1}: bbox=[{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}], "
+                               f"confidence={confidence:.3f}, area={area:.1f}")
+        
+        logging.info("=" * 60)
+        
+        if total_detections == 0:
+            # 无变化时返回干净的全景图（不添加任何文字）
+            return annotated_panorama
+        
+        # 颜色配置
+        colors = [
+            (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0),
+            (255, 0, 255), (0, 255, 255), (128, 255, 0), (255, 128, 0)
+        ]
+        
+        # 为每个检测在全景图上绘制简洁的标记点
+        detection_id = 0
+        for face_name, result in mapped_results.items():
+            face_index = self.face_names.index(face_name)
+            
+            for detection in result['detections']:
+                color = colors[detection_id % len(colors)]
                 
-                cv2.putText(annotated_panorama, f"{face_desc}: {count}", 
-                           (50, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                y_offset += int(line_height * 0.8)
+                # 将检测框中心点映射到全景图坐标
+                center_point = self._map_detection_center_to_panorama(
+                    detection['bbox'], face_index, cube_size, panorama_width, panorama_height
+                )
+                
+                if center_point:
+                    # 添加面索引和立方体尺寸到检测信息中
+                    detection_with_meta = detection.copy()
+                    detection_with_meta['face_index'] = face_index
+                    detection_with_meta['cube_size'] = cube_size
+                    
+                    # 绘制真实比例的检测框
+                    self._draw_detection_marker(
+                        annotated_panorama, center_point, detection_with_meta, color, detection_id + 1
+                    )
+                
+                detection_id += 1
+        
+        # 添加文字摘要到右上角
+        self._add_summary_text(annotated_panorama, mapped_results, total_detections)
         
         return annotated_panorama
+    
+    def _map_detection_center_to_panorama(self, bbox: List[int], face_index: int, 
+                                        cube_size: int, panorama_width: int, 
+                                        panorama_height: int) -> Optional[Tuple[int, int]]:
+        """
+        将检测框中心点从立方体面坐标映射到全景图坐标
+        
+        Args:
+            bbox: [x, y, w, h] 在立方体面上的坐标
+            face_index: 面索引
+            cube_size: 立方体面尺寸
+            panorama_width, panorama_height: 全景图尺寸
+            
+        Returns:
+            全景图上的中心点坐标 (x, y)
+        """
+        x, y, w, h = bbox
+        
+        # 计算检测框中心点
+        center_x = x + w / 2.0
+        center_y = y + h / 2.0
+        
+        # 标准化立方体面坐标到[-1, 1]
+        norm_x = (2.0 * center_x / cube_size) - 1.0
+        norm_y = (2.0 * center_y / cube_size) - 1.0
+        
+        # 获取3D坐标
+        x3d, y3d, z3d = self._get_face_3d_coords_cpu(face_index, norm_x, norm_y)
+        
+        # 转换为球面坐标
+        r = math.sqrt(x3d * x3d + y3d * y3d + z3d * z3d)
+        theta = math.atan2(x3d, z3d)
+        phi = math.acos(y3d / r) if r > 0 else 0
+        
+        # 转换为全景图坐标
+        u = (theta + math.pi) / (2 * math.pi) * panorama_width
+        v = phi / math.pi * panorama_height
+        
+        # 边界检查
+        u = max(0, min(u, panorama_width - 1))
+        v = max(0, min(v, panorama_height - 1))
+        
+        return (int(u), int(v))
+    
+    def _get_face_3d_coords_cpu(self, face_index: int, x: float, y: float):
+        """获取立方体面的3D坐标（CPU版本）"""
+        if face_index == 0:    # front
+            return x, -y, 1.0
+        elif face_index == 1:  # right
+            return 1.0, -y, -x
+        elif face_index == 2:  # back
+            return -x, -y, -1.0
+        elif face_index == 3:  # left
+            return -1.0, -y, x
+        elif face_index == 4:  # top
+            return x, 1.0, y
+        elif face_index == 5:  # bottom
+            return x, -1.0, y
+        else:
+            raise ValueError(f"无效的面索引: {face_index}")
+    
+    def _draw_detection_marker(self, panorama: np.ndarray, 
+                             center_point: Tuple[int, int], 
+                             detection: Dict[str, Any], color: Tuple[int, int, int], 
+                             detection_id: int):
+        """在全景图上绘制真实比例的检测框（无文字信息）"""
+        center_x, center_y = center_point
+        
+        # 获取检测框的实际尺寸和立方体面信息
+        bbox = detection.get('bbox', [0, 0, 50, 50])
+        face_index = detection.get('face_index', 0)
+        cube_size = detection.get('cube_size', 1024)
+        
+        # 计算真实比例的检测框
+        real_bbox = self._calculate_real_scale_bbox(
+            bbox, face_index, cube_size, panorama.shape[1], panorama.shape[0]
+        )
+        
+        if real_bbox is None:
+            # 如果映射失败，回退到中心点标记
+            cv2.circle(panorama, (center_x, center_y), 8, color, -1)
+            cv2.circle(panorama, (center_x, center_y), 10, (255, 255, 255), 2)
+            return
+        
+        x1, y1, x2, y2 = real_bbox
+        
+        # 边界检查
+        panorama_height, panorama_width = panorama.shape[:2]
+        x1 = max(0, min(x1, panorama_width - 1))
+        y1 = max(0, min(y1, panorama_height - 1))
+        x2 = max(0, min(x2, panorama_width - 1))
+        y2 = max(0, min(y2, panorama_height - 1))
+        
+        # 确保框有效（避免退化的矩形）
+        if x2 <= x1 or y2 <= y1:
+            # 回退到中心点标记
+            cv2.circle(panorama, (center_x, center_y), 8, color, -1)
+            cv2.circle(panorama, (center_x, center_y), 10, (255, 255, 255), 2)
+            return
+        
+        # 绘制检测框
+        thickness = 3
+        cv2.rectangle(panorama, (x1, y1), (x2, y2), color, thickness)
+        
+        # 绘制白色外框增强可见性
+        cv2.rectangle(panorama, (x1-1, y1-1), (x2+1, y2+1), (255, 255, 255), 1)
+        
+        # 绘制中心点标记
+        cv2.circle(panorama, (center_x, center_y), 3, color, -1)
+        cv2.circle(panorama, (center_x, center_y), 4, (255, 255, 255), 1)
+    
+    def _calculate_real_scale_bbox(self, bbox: List[int], face_index: int, 
+                                  cube_size: int, panorama_width: int, 
+                                  panorama_height: int) -> Optional[Tuple[int, int, int, int]]:
+        """
+        计算检测框在全景图上的真实比例边界框
+        
+        Args:
+            bbox: [x, y, w, h] 在立方体面上的坐标
+            face_index: 面索引
+            cube_size: 立方体面尺寸
+            panorama_width, panorama_height: 全景图尺寸
+            
+        Returns:
+            全景图上的边界框坐标 [x1, y1, x2, y2] 或 None（如果映射失败）
+        """
+        x, y, w, h = bbox
+        
+        # 定义检测框的四个角点
+        corners = [
+            (x, y),           # 左上角
+            (x + w, y),       # 右上角
+            (x, y + h),       # 左下角
+            (x + w, y + h)    # 右下角
+        ]
+        
+        # 映射所有角点到全景图
+        mapped_points = []
+        for corner_x, corner_y in corners:
+            # 标准化立方体面坐标到[-1, 1]
+            norm_x = (2.0 * corner_x / cube_size) - 1.0
+            norm_y = (2.0 * corner_y / cube_size) - 1.0
+            
+            # 获取3D坐标
+            x3d, y3d, z3d = self._get_face_3d_coords_cpu(face_index, norm_x, norm_y)
+            
+            # 转换为球面坐标
+            r = math.sqrt(x3d * x3d + y3d * y3d + z3d * z3d)
+            if r == 0:
+                continue
+                
+            theta = math.atan2(x3d, z3d)
+            phi = math.acos(y3d / r)
+            
+            # 转换为全景图坐标
+            u = (theta + math.pi) / (2 * math.pi) * panorama_width
+            v = phi / math.pi * panorama_height
+            
+            # 边界检查
+            u = max(0, min(u, panorama_width - 1))
+            v = max(0, min(v, panorama_height - 1))
+            
+            mapped_points.append((int(u), int(v)))
+        
+        if len(mapped_points) < 4:
+            return None
+        
+        # 计算映射后的边界框
+        u_coords = [p[0] for p in mapped_points]
+        v_coords = [p[1] for p in mapped_points]
+        
+        # 处理全景图边界换行问题（经度0/360度边界）
+        u_min, u_max = min(u_coords), max(u_coords)
+        v_min, v_max = min(v_coords), max(v_coords)
+        
+        # 检查是否跨越全景图边界（经度换行）
+        if u_max - u_min > panorama_width * 0.5:
+            # 可能跨越了0/360度边界，需要特殊处理
+            # 这种情况下使用原始的简化映射
+            center_x = x + w // 2
+            center_y = y + h // 2
+            
+            # 计算一个合理的缩放比例
+            # 基于立方体面在全景图中的相对大小
+            scale_factor = panorama_width / (6 * cube_size)  # 6个面平均分布
+            
+            box_w = max(10, int(w * scale_factor))
+            box_h = max(10, int(h * scale_factor))
+            
+            center_u, center_v = self._map_point_to_panorama(
+                center_x, center_y, face_index, cube_size, panorama_width, panorama_height
+            )
+            
+            if center_u is None or center_v is None:
+                return None
+                
+            x1 = center_u - box_w // 2
+            y1 = center_v - box_h // 2
+            x2 = center_u + box_w // 2
+            y2 = center_v + box_h // 2
+            
+            return (x1, y1, x2, y2)
+        
+        return (u_min, v_min, u_max, v_max)
+    
+    def _map_point_to_panorama(self, x: float, y: float, face_index: int, 
+                              cube_size: int, panorama_width: int, 
+                              panorama_height: int) -> Tuple[Optional[int], Optional[int]]:
+        """映射单个点到全景图坐标"""
+        # 标准化立方体面坐标到[-1, 1]
+        norm_x = (2.0 * x / cube_size) - 1.0
+        norm_y = (2.0 * y / cube_size) - 1.0
+        
+        # 获取3D坐标
+        x3d, y3d, z3d = self._get_face_3d_coords_cpu(face_index, norm_x, norm_y)
+        
+        # 转换为球面坐标
+        r = math.sqrt(x3d * x3d + y3d * y3d + z3d * z3d)
+        if r == 0:
+            return None, None
+            
+        theta = math.atan2(x3d, z3d)
+        phi = math.acos(y3d / r)
+        
+        # 转换为全景图坐标
+        u = (theta + math.pi) / (2 * math.pi) * panorama_width
+        v = phi / math.pi * panorama_height
+        
+        # 边界检查
+        u = max(0, min(u, panorama_width - 1))
+        v = max(0, min(v, panorama_height - 1))
+        
+        return int(u), int(v)
+    
+    def _add_summary_text(self, panorama: np.ndarray, 
+                         mapped_results: Dict[str, Dict[str, Any]], 
+                         total_detections: int):
+        """添加摘要信息（已禁用文字显示）"""
+        # 不绘制任何文字信息，保持全景图干净
+        pass
     
     def get_mapping_statistics(self, mapped_results: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         """

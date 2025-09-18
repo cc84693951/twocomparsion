@@ -118,7 +118,48 @@ class PanoramaChangeDetectionSystem:
             cuda_config=self.config.cuda
         )
         
-        logging.info("所有处理模块初始化完成")
+        # 显示CUDA状态汇总
+        cuda_status = "启用" if self.config.cuda.use_cuda else "禁用"
+        logging.info(f"所有处理模块初始化完成，CUDA状态: {cuda_status}")
+        
+        if self.config.cuda.use_cuda:
+            logging.info("✅ 以下操作将使用CUDA加速:")
+            logging.info("   - 全景图分割和重建")
+            logging.info("   - 图像预处理（去噪、直方图均衡）")
+            logging.info("   - 图像差分计算")
+            logging.info("   - 形态学操作（腐蚀、膨胀等）")
+            logging.info("   - 结果映射和坐标变换")
+            
+            # 详细的CUDA状态检查
+            try:
+                import cupy as cp
+                cuda_available = True
+                gpu_count = cp.cuda.runtime.getDeviceCount()
+                current_device = cp.cuda.Device().id
+                
+                # 获取GPU内存信息
+                mempool = cp.get_default_memory_pool()
+                total_bytes = mempool.total_bytes()
+                used_bytes = mempool.used_bytes()
+                
+                logging.info(f"   GPU设备数量: {gpu_count}")
+                logging.info(f"   当前GPU设备: {current_device}")
+                logging.info(f"   GPU内存池: 已用 {used_bytes // (1024**2)} MB")
+                
+                # 尝试获取设备属性
+                try:
+                    device_properties = cp.cuda.runtime.getDeviceProperties(current_device)
+                    total_memory = device_properties['totalGlobalMem']
+                    logging.info(f"   GPU总内存: {total_memory // (1024**3)} GB")
+                except:
+                    logging.info(f"   GPU内存信息: 可用 (具体数值获取失败)")
+                    
+            except Exception as e:
+                logging.warning(f"   CUDA状态检查失败: {e}")
+                cuda_available = False
+        else:
+            logging.info("⚠️  CUDA未启用，将使用CPU处理")
+            cuda_available = False
     
     def process_panorama_pair(self, panorama1_path: str, panorama2_path: str,
                              save_intermediate: bool = True) -> Dict[str, Any]:
@@ -135,11 +176,18 @@ class PanoramaChangeDetectionSystem:
         """
         start_time = datetime.now()
         
-        logging.info(f"开始处理全景图对: {os.path.basename(panorama1_path)} vs {os.path.basename(panorama2_path)}")
+        logging.info("=" * 80)
+        logging.info("全景图变化检测处理开始")
+        logging.info(f"输入图像: {os.path.basename(panorama1_path)} vs {os.path.basename(panorama2_path)}")
+        logging.info(f"输出目录: {self.output_dir}")
+        logging.info(f"保存中间结果: {save_intermediate}")
+        logging.info(f"处理开始时间: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logging.info("=" * 80)
         
         # 保存配置
         config_path = os.path.join(self.output_dir, 'system_config.json')
         save_config_to_file(self.config, config_path)
+        logging.info(f"系统配置已保存: {config_path}")
         
         try:
             # 1. 加载全景图
@@ -182,7 +230,34 @@ class PanoramaChangeDetectionSystem:
             if save_intermediate:
                 self._generate_visualizations_and_reports(results)
             
-            logging.info(f"全景图变化检测完成，耗时: {processing_time}")
+            # 9. 生成完整的处理摘要
+            total_detections = sum(len(result['detections']) for result in mapped_results.values())
+            successful_faces = 0
+            
+            # 安全地统计成功配准的面数
+            for face_name, reg_result in registration_info.items():
+                # 跳过summary等非面数据
+                if face_name == 'summary':
+                    continue
+                    
+                if isinstance(reg_result, dict) and 'registration_info' in reg_result:
+                    if reg_result['registration_info'].get('registration_success', False):
+                        successful_faces += 1
+            
+            logging.info("=" * 80)
+            logging.info("全景图变化检测处理完成")
+            logging.info(f"处理时间: {processing_time}")
+            logging.info(f"成功配准面数: {successful_faces}/{len(cube_faces1)}")
+            logging.info(f"检测到变化总数: {total_detections}")
+            logging.info(f"最终全景图尺寸: {final_panorama.shape[1]} x {final_panorama.shape[0]}")
+            
+            # 各面检测摘要
+            for face_name, result in mapped_results.items():
+                if result['detections']:
+                    logging.info(f"  {face_name}: {len(result['detections'])} 个检测")
+            
+            logging.info(f"结果已保存至: {self.output_dir}")
+            logging.info("=" * 80)
             
             return results
             
@@ -512,8 +587,8 @@ def main():
     system = PanoramaChangeDetectionSystem()
     
     # 示例全景图路径（请根据实际情况修改）
-    panorama1_path = "/Users/chenyu/Desktop/twocomparsion/test/20250910164040_0002_V.jpeg"
-    panorama2_path = "/Users/chenyu/Desktop/twocomparsion/test/20250910164151_0003_V.jpeg"
+    panorama1_path = r"C:\Users\admin\Desktop\twocomparsion\test\20250910164040_0002_V.jpeg"
+    panorama2_path = r"C:\Users\admin\Desktop\twocomparsion\test\20250910164151_0003_V.jpeg"
     
     if os.path.exists(panorama1_path) and os.path.exists(panorama2_path):
         try:

@@ -81,7 +81,7 @@ class ImageRegistration:
                 
                 # 配准单个面
                 aligned_face, transform_matrix, reg_info = self.register_single_pair(
-                    faces1[face_name], faces2[face_name]
+                    faces1[face_name], faces2[face_name], face_name
                 )
                 
                 aligned_faces[face_name] = aligned_face
@@ -95,10 +95,41 @@ class ImageRegistration:
             else:
                 logging.warning(f"立方体面 {face_name} 在第二组中不存在")
         
-        logging.info(f"立方体面配准完成，成功配准 {len(aligned_faces)} 个面")
+        # 详细日志记录配准结果
+        logging.info("=" * 50)
+        logging.info("图像配准详细结果:")
+        
+        successful_registrations = 0
+        failed_registrations = 0
+        
+        for face_name, reg_result in registration_info.items():
+            # 跳过summary等非面数据
+            if face_name == 'summary' or not isinstance(reg_result, dict) or 'registration_info' not in reg_result:
+                continue
+                
+            reg_info = reg_result['registration_info']
+            success = reg_info.get('registration_success', False)
+            keypoints1 = reg_info.get('keypoints1', 0)
+            keypoints2 = reg_info.get('keypoints2', 0)
+            matches = reg_info.get('matches', 0)
+            inlier_ratio = reg_info.get('inlier_ratio', 0.0)
+            
+            if success:
+                successful_registrations += 1
+                logging.info(f"  {face_name}: ✓ 配准成功")
+            else:
+                failed_registrations += 1
+                logging.info(f"  {face_name}: ✗ 配准失败")
+            
+            logging.info(f"    特征点: img1={keypoints1}, img2={keypoints2}")
+            logging.info(f"    匹配点: {matches}, 内点比例: {inlier_ratio:.3f}")
+        
+        logging.info(f"配准摘要: 成功 {successful_registrations} 个, 失败 {failed_registrations} 个")
+        logging.info("=" * 50)
+        
         return aligned_faces, registration_info
     
-    def register_single_pair(self, img1: np.ndarray, img2: np.ndarray) -> Tuple[np.ndarray, 
+    def register_single_pair(self, img1: np.ndarray, img2: np.ndarray, face_name: str = "") -> Tuple[np.ndarray, 
                                                                                Optional[np.ndarray],
                                                                                Dict[str, Any]]:
         """
@@ -119,10 +150,11 @@ class ImageRegistration:
         kp1, des1 = self.akaze.detectAndCompute(gray1, None)
         kp2, des2 = self.akaze.detectAndCompute(gray2, None)
         
-        logging.debug(f"检测到特征点: img1={len(kp1)}, img2={len(kp2)}")
+        face_info = f" ({face_name})" if face_name else ""
+        logging.debug(f"检测到特征点{face_info}: img1={len(kp1)}, img2={len(kp2)}")
         
         if des1 is None or des2 is None or len(kp1) < 4 or len(kp2) < 4:
-            logging.warning("特征点不足，返回原图像")
+            logging.warning(f"面 {face_name} 特征点不足，返回原图像" if face_name else "特征点不足，返回原图像")
             return img2, None, {
                 "keypoints1": len(kp1) if kp1 else 0,
                 "keypoints2": len(kp2) if kp2 else 0,
@@ -134,10 +166,10 @@ class ImageRegistration:
         # 2. 特征匹配
         good_matches = self.match_features(des1, des2)
         
-        logging.debug(f"良好匹配点: {len(good_matches)}")
+        logging.debug(f"良好匹配点{face_info}: {len(good_matches)}")
         
         if len(good_matches) < self.config.min_match_count:
-            logging.warning(f"良好匹配点不足 {self.config.min_match_count} 个")
+            logging.warning(f"面 {face_name} 良好匹配点不足 {self.config.min_match_count} 个" if face_name else f"良好匹配点不足 {self.config.min_match_count} 个")
             return img2, None, {
                 "keypoints1": len(kp1),
                 "keypoints2": len(kp2),
@@ -150,7 +182,7 @@ class ImageRegistration:
         transform_matrix, inlier_mask = self.compute_homography(kp1, kp2, good_matches)
         
         if transform_matrix is None:
-            logging.warning("无法计算单应性矩阵")
+            logging.warning(f"面 {face_name} 无法计算单应性矩阵" if face_name else "无法计算单应性矩阵")
             return img2, None, {
                 "keypoints1": len(kp1),
                 "keypoints2": len(kp2),
@@ -179,7 +211,7 @@ class ImageRegistration:
             "transform_matrix": transform_matrix.tolist() if transform_matrix is not None else None
         }
         
-        logging.debug(f"配准成功，内点比例: {inlier_ratio:.2%}")
+        logging.debug(f"面 {face_name} 配准成功，内点比例: {inlier_ratio:.2%}" if face_name else f"配准成功，内点比例: {inlier_ratio:.2%}")
         
         return aligned_img, transform_matrix, registration_info
     

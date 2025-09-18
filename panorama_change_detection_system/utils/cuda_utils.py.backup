@@ -335,7 +335,7 @@ class CUDAUtils:
             if result_gpu.dtype == bool:
                 result_gpu = result_gpu.astype(cp.uint8) * 255
             
-            return self.to_cpu(result_gpu)
+        return self.to_cpu(result_gpu)
     
         except Exception as e:
             logging.warning(f"CUDA形态学操作失败，回退到CPU: {e}")

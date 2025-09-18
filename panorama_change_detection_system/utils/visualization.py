@@ -99,12 +99,24 @@ class VisualizationUtils:
     def _plot_panorama_inputs(self, axes, results):
         """绘制全景图输入"""
         if 'panorama_1' in results:
-            axes[0].imshow(cv2.cvtColor(results['panorama_1'], cv2.COLOR_BGR2RGB))
+            pano1 = results['panorama_1']
+            if isinstance(pano1, np.ndarray):
+                axes[0].imshow(cv2.cvtColor(pano1, cv2.COLOR_BGR2RGB))
+                axes[0].set_title('第一期全景图', fontsize=12)
+                axes[0].axis('off')
+            else:
+                axes[0].text(0.5, 0.5, '全景图1不可用', ha='center', va='center', transform=axes[0].transAxes)
             axes[0].set_title('第一期全景图', fontsize=12)
             axes[0].axis('off')
         
         if 'panorama_2' in results:
-            axes[1].imshow(cv2.cvtColor(results['panorama_2'], cv2.COLOR_BGR2RGB))
+            pano2 = results['panorama_2']
+            if isinstance(pano2, np.ndarray):
+                axes[1].imshow(cv2.cvtColor(pano2, cv2.COLOR_BGR2RGB))
+                axes[1].set_title('第二期全景图', fontsize=12)
+                axes[1].axis('off')
+            else:
+                axes[1].text(0.5, 0.5, '全景图2不可用', ha='center', va='center', transform=axes[1].transAxes)
             axes[1].set_title('第二期全景图', fontsize=12)
             axes[1].axis('off')
         
@@ -128,7 +140,14 @@ class VisualizationUtils:
         for i, face_name in enumerate(face_names):
             if 'cube_faces_1' in results and face_name in results['cube_faces_1']:
                 face_img = results['cube_faces_1'][face_name]
-                axes[i].imshow(cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB))
+                if isinstance(face_img, np.ndarray):
+                    axes[i].imshow(cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB))
+                    axes[i].set_title(f'立方体面: {face_name}', fontsize=10)
+                else:
+                    axes[i].text(0.5, 0.5, f'{face_name}\n不可用', ha='center', va='center', transform=axes[i].transAxes)
+                    axes[i].set_title(f'立方体面: {face_name}', fontsize=10)
+            else:
+                axes[i].text(0.5, 0.5, f'{face_name}\n未找到', ha='center', va='center', transform=axes[i].transAxes)
                 axes[i].set_title(f'立方体面: {face_name}', fontsize=10)
             axes[i].axis('off')
     
@@ -140,15 +159,36 @@ class VisualizationUtils:
             
             # 显示一个面的预处理前后对比
             if 'before' in preprocessing and 'after' in preprocessing:
-                face_name = list(preprocessing['before'].keys())[0]
+                # 获取period1的第一个面作为示例
+                period_key = 'period1'
+                if period_key in preprocessing['before'] and period_key in preprocessing['after']:
+                    before_faces = preprocessing['before'][period_key]
+                    after_faces = preprocessing['after'][period_key]
+                    
+                    if before_faces and after_faces:
+                        face_name = list(before_faces.keys())[0]
+                        
+                        # 确保图像是numpy数组
+                        before_img = before_faces[face_name]
+                        after_img = after_faces[face_name]
+                        
+                        if isinstance(before_img, np.ndarray) and isinstance(after_img, np.ndarray):
+                            axes[0].imshow(cv2.cvtColor(before_img, cv2.COLOR_BGR2RGB))
+                            axes[0].set_title(f'预处理前 ({face_name})', fontsize=10)
+                            axes[0].axis('off')
                 
-                axes[0].imshow(cv2.cvtColor(preprocessing['before'][face_name], cv2.COLOR_BGR2RGB))
-                axes[0].set_title(f'预处理前 ({face_name})', fontsize=10)
-                axes[0].axis('off')
-                
-                axes[1].imshow(cv2.cvtColor(preprocessing['after'][face_name], cv2.COLOR_BGR2RGB))
-                axes[1].set_title(f'预处理后 ({face_name})', fontsize=10)
-                axes[1].axis('off')
+                            axes[1].imshow(cv2.cvtColor(after_img, cv2.COLOR_BGR2RGB))
+                            axes[1].set_title(f'预处理后 ({face_name})', fontsize=10)
+                            axes[1].axis('off')
+                        else:
+                            # 如果不是numpy数组，显示占位符
+                            axes[0].text(0.5, 0.5, '预处理前数据不可用', ha='center', va='center', transform=axes[0].transAxes)
+                            axes[0].set_title('预处理前', fontsize=10)
+                            axes[0].axis('off')
+                            
+                            axes[1].text(0.5, 0.5, '预处理后数据不可用', ha='center', va='center', transform=axes[1].transAxes)
+                            axes[1].set_title('预处理后', fontsize=10)
+                            axes[1].axis('off')
         
         # 配准结果
         if 'registration' in results:
@@ -158,7 +198,12 @@ class VisualizationUtils:
                 if i + 2 < len(axes):
                     face_result = registration[face_name]
                     if 'aligned_image' in face_result:
-                        axes[i + 2].imshow(cv2.cvtColor(face_result['aligned_image'], cv2.COLOR_BGR2RGB))
+                        aligned_img = face_result['aligned_image']
+                        if isinstance(aligned_img, np.ndarray):
+                            axes[i + 2].imshow(cv2.cvtColor(aligned_img, cv2.COLOR_BGR2RGB))
+                            axes[i + 2].set_title(f'配准后 ({face_name})', fontsize=10)
+                        else:
+                            axes[i + 2].text(0.5, 0.5, '配准数据不可用', ha='center', va='center', transform=axes[i + 2].transAxes)
                         axes[i + 2].set_title(f'配准后 ({face_name})', fontsize=10)
                     axes[i + 2].axis('off')
     
@@ -178,7 +223,13 @@ class VisualizationUtils:
         
         # 最终全景图结果
         if 'final_result' in results:
-            axes[3].imshow(cv2.cvtColor(results['final_result'], cv2.COLOR_BGR2RGB))
+            final_result = results['final_result']
+            if isinstance(final_result, np.ndarray):
+                axes[3].imshow(cv2.cvtColor(final_result, cv2.COLOR_BGR2RGB))
+                axes[3].set_title('最终结果', fontsize=10)
+                axes[3].axis('off')
+            else:
+                axes[3].text(0.5, 0.5, '最终结果不可用', ha='center', va='center', transform=axes[3].transAxes)
             axes[3].set_title('最终结果', fontsize=10)
             axes[3].axis('off')
         
@@ -229,18 +280,43 @@ class VisualizationUtils:
     def _plot_face_preprocessing(self, axes, face_name, results):
         """绘制面的预处理过程"""
         if 'cube_faces_1' in results and face_name in results['cube_faces_1']:
-            axes[0].imshow(cv2.cvtColor(results['cube_faces_1'][face_name], cv2.COLOR_BGR2RGB))
+            face1_img = results['cube_faces_1'][face_name]
+            if isinstance(face1_img, np.ndarray):
+                axes[0].imshow(cv2.cvtColor(face1_img, cv2.COLOR_BGR2RGB))
+                axes[0].set_title('原始图像1', fontsize=12)
+                axes[0].axis('off')
+            else:
+                axes[0].text(0.5, 0.5, '原始图像1不可用', ha='center', va='center', transform=axes[0].transAxes)
             axes[0].set_title('原始图像1', fontsize=12)
             axes[0].axis('off')
         
         if 'cube_faces_2' in results and face_name in results['cube_faces_2']:
-            axes[1].imshow(cv2.cvtColor(results['cube_faces_2'][face_name], cv2.COLOR_BGR2RGB))
+            face2_img = results['cube_faces_2'][face_name]
+            if isinstance(face2_img, np.ndarray):
+                axes[1].imshow(cv2.cvtColor(face2_img, cv2.COLOR_BGR2RGB))
+                axes[1].set_title('原始图像2', fontsize=12)
+                axes[1].axis('off')
+            else:
+                axes[1].text(0.5, 0.5, '原始图像2不可用', ha='center', va='center', transform=axes[1].transAxes)
             axes[1].set_title('原始图像2', fontsize=12)
             axes[1].axis('off')
         
         if 'preprocessing' in results and 'after' in results['preprocessing']:
-            if face_name in results['preprocessing']['after']:
-                axes[2].imshow(cv2.cvtColor(results['preprocessing']['after'][face_name], cv2.COLOR_BGR2RGB))
+            # 在'after'中查找period1或period2中的face_name
+            after_data = results['preprocessing']['after']
+            preprocessed_img = None
+            
+            for period_key in ['period1', 'period2']:
+                if period_key in after_data and face_name in after_data[period_key]:
+                    preprocessed_img = after_data[period_key][face_name]
+                    break
+            
+            if preprocessed_img is not None and isinstance(preprocessed_img, np.ndarray):
+                axes[2].imshow(cv2.cvtColor(preprocessed_img, cv2.COLOR_BGR2RGB))
+                axes[2].set_title('预处理后', fontsize=12)
+                axes[2].axis('off')
+            else:
+                axes[2].text(0.5, 0.5, '预处理数据不可用', ha='center', va='center', transform=axes[2].transAxes)
                 axes[2].set_title('预处理后', fontsize=12)
                 axes[2].axis('off')
         
@@ -265,18 +341,36 @@ CLAHE限制: {params.get('clahe_clip_limit', 'N/A')}
             
             # 配准前
             if 'image1' in reg_result:
-                axes[0].imshow(cv2.cvtColor(reg_result['image1'], cv2.COLOR_BGR2RGB))
+                img1 = reg_result['image1']
+                if isinstance(img1, np.ndarray):
+                    axes[0].imshow(cv2.cvtColor(img1, cv2.COLOR_BGR2RGB))
+                    axes[0].set_title('配准前图像1', fontsize=12)
+                    axes[0].axis('off')
+                else:
+                    axes[0].text(0.5, 0.5, '配准前图像1不可用', ha='center', va='center', transform=axes[0].transAxes)
                 axes[0].set_title('配准前图像1', fontsize=12)
                 axes[0].axis('off')
             
             if 'image2' in reg_result:
-                axes[1].imshow(cv2.cvtColor(reg_result['image2'], cv2.COLOR_BGR2RGB))
+                img2 = reg_result['image2']
+                if isinstance(img2, np.ndarray):
+                    axes[1].imshow(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB))
+                    axes[1].set_title('配准前图像2', fontsize=12)
+                    axes[1].axis('off')
+                else:
+                    axes[1].text(0.5, 0.5, '配准前图像2不可用', ha='center', va='center', transform=axes[1].transAxes)
                 axes[1].set_title('配准前图像2', fontsize=12)
                 axes[1].axis('off')
             
             # 配准后
             if 'aligned_image' in reg_result:
-                axes[2].imshow(cv2.cvtColor(reg_result['aligned_image'], cv2.COLOR_BGR2RGB))
+                aligned_img = reg_result['aligned_image']
+                if isinstance(aligned_img, np.ndarray):
+                    axes[2].imshow(cv2.cvtColor(aligned_img, cv2.COLOR_BGR2RGB))
+                    axes[2].set_title('配准后图像2', fontsize=12)
+                    axes[2].axis('off')
+                else:
+                    axes[2].text(0.5, 0.5, '配准后图像不可用', ha='center', va='center', transform=axes[2].transAxes)
                 axes[2].set_title('配准后图像2', fontsize=12)
                 axes[2].axis('off')
             
@@ -316,9 +410,14 @@ CLAHE限制: {params.get('clahe_clip_limit', 'N/A')}
             # 检测结果
             if 'detection_result' in det_result:
                 detection_img = det_result['detection_result']
-                axes[2].imshow(cv2.cvtColor(detection_img, cv2.COLOR_BGR2RGB))
-                axes[2].set_title('检测结果', fontsize=12)
-                axes[2].axis('off')
+                if isinstance(detection_img, np.ndarray):
+                    axes[2].imshow(cv2.cvtColor(detection_img, cv2.COLOR_BGR2RGB))
+                    axes[2].set_title('检测结果', fontsize=12)
+                    axes[2].axis('off')
+                else:
+                    axes[2].text(0.5, 0.5, '检测结果不可用', ha='center', va='center', transform=axes[2].transAxes)
+                    axes[2].set_title('检测结果', fontsize=12)
+                    axes[2].axis('off')
             
             # 检测统计
             if 'detection_stats' in det_result:
@@ -349,15 +448,24 @@ CLAHE限制: {params.get('clahe_clip_limit', 'N/A')}
         fig.suptitle(f'{title} - 检测结果可视化', fontsize=14, fontweight='bold')
         
         # 原始图像
-        axes[0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        axes[0].set_title('原始图像', fontsize=12)
-        axes[0].axis('off')
-        
-        # 带检测框的图像
-        image_with_boxes = self.draw_bboxes_on_image(image.copy(), bboxes)
-        axes[1].imshow(cv2.cvtColor(image_with_boxes, cv2.COLOR_BGR2RGB))
-        axes[1].set_title(f'检测结果 ({len(bboxes)} 个区域)', fontsize=12)
-        axes[1].axis('off')
+        if isinstance(image, np.ndarray):
+            axes[0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+            axes[0].set_title('原始图像', fontsize=12)
+            axes[0].axis('off')
+            
+            # 带检测框的图像
+            image_with_boxes = self.draw_bboxes_on_image(image.copy(), bboxes)
+            axes[1].imshow(cv2.cvtColor(image_with_boxes, cv2.COLOR_BGR2RGB))
+            axes[1].set_title(f'检测结果 ({len(bboxes)} 个区域)', fontsize=12)
+            axes[1].axis('off')
+        else:
+            axes[0].text(0.5, 0.5, '原始图像不可用', ha='center', va='center', transform=axes[0].transAxes)
+            axes[0].set_title('原始图像', fontsize=12)
+            axes[0].axis('off')
+            
+            axes[1].text(0.5, 0.5, '检测结果不可用', ha='center', va='center', transform=axes[1].transAxes)
+            axes[1].set_title('检测结果', fontsize=12)
+            axes[1].axis('off')
         
         # 统计信息
         if bboxes:

@@ -65,8 +65,37 @@ class ChangeDetector:
             else:
                 logging.warning(f"立方体面 {face_name} 在配准后的第二组中不存在")
         
+        # 详细日志记录检测结果
         total_detections = sum(len(result['detections']) for result in change_results.values())
-        logging.info(f"立方体面变化检测完成，总共检测到 {total_detections} 个变化区域")
+        
+        logging.info("=" * 50)
+        logging.info("变化检测详细结果:")
+        logging.info(f"  总检测数量: {total_detections}")
+        
+        for face_name, result in change_results.items():
+            detections = result.get('detections', [])
+            threshold = result.get('threshold_used', 0)
+            original_count = result.get('original_detections', 0)
+            filtered_count = len(detections)
+            num_contours = result.get('num_contours_found', 0)
+            
+            logging.info(f"  {face_name} 面:")
+            logging.info(f"    阈值: {threshold}")
+            logging.info(f"    轮廓数: {num_contours}")
+            logging.info(f"    原始检测: {original_count} 个")
+            logging.info(f"    过滤后: {filtered_count} 个")
+            
+            if detections:
+                confidences = [d.get('confidence', 0.0) for d in detections]
+                areas = [d.get('area', 0.0) for d in detections]
+                if confidences:
+                    avg_confidence = sum(confidences) / len(confidences)
+                    logging.info(f"    平均置信度: {avg_confidence:.3f}")
+                if areas:
+                    avg_area = sum(areas) / len(areas)
+                    logging.info(f"    平均面积: {avg_area:.1f} 像素")
+        
+        logging.info("=" * 50)
         
         return change_results
     
@@ -824,11 +853,18 @@ class ChangeDetector:
         solidity = area / hull_area if hull_area > 0 else 0
         
         # 2. 差异强度特征
-        roi_diff = diff_image[y:y+h, x:x+w]
-        roi_mask = edge_mask[y:y+h, x:x+w]
+        # 确保边界框坐标在图像范围内
+        img_h, img_w = diff_image.shape[:2]
+        y_end = min(y + h, img_h)
+        x_end = min(x + w, img_w)
+        y_start = max(0, y)
+        x_start = max(0, x)
+        
+        roi_diff = diff_image[y_start:y_end, x_start:x_end]
+        roi_mask = edge_mask[y_start:y_end, x_start:x_end]
         
         # 只考虑有效区域内的像素
-        valid_diff = roi_diff[roi_mask[y:y+h, x:x+w]] if roi_mask[y:y+h, x:x+w].any() else roi_diff
+        valid_diff = roi_diff[roi_mask] if roi_mask.any() else roi_diff
         
         if len(valid_diff) == 0:
             return 0.0

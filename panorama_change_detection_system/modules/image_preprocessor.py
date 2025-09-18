@@ -415,10 +415,23 @@ class ImagePreprocessor:
         Returns:
             两组预处理后的立方体面
         """
-        logging.info("同时预处理两组立方体面")
+        logging.info("=" * 50)
+        logging.info("图像预处理详细参数:")
+        logging.info(f"  去噪方法: {self.config.denoise_method}")
+        logging.info(f"  高斯核大小: {self.config.gaussian_kernel_size}")
+        logging.info(f"  双边滤波参数: d={self.config.bilateral_d}, sigma_color={self.config.bilateral_sigma_color}, sigma_space={self.config.bilateral_sigma_space}")
+        logging.info(f"  中值滤波核: {self.config.median_kernel_size}")
+        logging.info(f"  CLAHE启用: {self.config.enable_clahe}")
+        logging.info(f"  CLAHE限制: {self.config.clahe_clip_limit}")
+        logging.info(f"  CLAHE网格: {self.config.clahe_grid_size}")
+        logging.info(f"  光照归一化: {self.config.enable_lighting_normalization}")
+        logging.info(f"  CUDA使用: {self.cuda_utils.use_cuda}")
         
         processed_faces1 = self.preprocess_cube_faces(faces1)
         processed_faces2 = self.preprocess_cube_faces(faces2)
+        
+        logging.info(f"预处理完成: 第一组 {len(processed_faces1)} 个面, 第二组 {len(processed_faces2)} 个面")
+        logging.info("=" * 50)
         
         return processed_faces1, processed_faces2
     

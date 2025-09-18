@@ -247,11 +247,3 @@ os.environ['PYTHONIOENCODING'] = 'utf-8'
 2. **查看示例**: `python example_usage.py`
 3. **处理您的数据**: 修改`main.py`中的路径
 4. **查看文档**: 阅读`README.md`了解详细功能
-
-如果遇到其他问题，请检查:
-- Python版本兼容性
-- 包版本冲突
-- 系统资源限制
-- 防火墙或权限设置
-
-祝您使用愉快！
