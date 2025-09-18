@@ -1,0 +1,672 @@
+{
+  "test_timestamp": "20250917_160735",
+  "total_tests": 36,
+  "results": [
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 2000,
+        "contrast_threshold": 0.03,
+        "edge_threshold": 10,
+        "sigma": 1.6,
+        "config": "高精度",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 2000,
+      "keypoints2": 2000,
+      "matches": 2000,
+      "good_matches": 104,
+      "inlier_ratio": 0.4807692307692308,
+      "processing_time": 0.41411805152893066,
+      "homography_quality": 0.0004312861650680286,
+      "match_quality_score": 0.6216935418281009
+    },
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 2000,
+        "contrast_threshold": 0.03,
+        "edge_threshold": 10,
+        "sigma": 1.6,
+        "config": "高精度",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 2000,
+      "keypoints2": 2000,
+      "matches": 2000,
+      "good_matches": 195,
+      "inlier_ratio": 0.4307692307692308,
+      "processing_time": 0.4586613178253174,
+      "homography_quality": 0.00042495605890883597,
+      "match_quality_score": 0.5997945099803431
+    },
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 2000,
+        "contrast_threshold": 0.03,
+        "edge_threshold": 10,
+        "sigma": 1.6,
+        "config": "高精度",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 2000,
+      "keypoints2": 2000,
+      "matches": 2000,
+      "good_matches": 335,
+      "inlier_ratio": 0.43582089552238806,
+      "processing_time": 0.47136974334716797,
+      "homography_quality": 0.00032490500373653556,
+      "match_quality_score": 0.571799859329916
+    },
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 1000,
+        "contrast_threshold": 0.04,
+        "edge_threshold": 10,
+        "sigma": 1.6,
+        "config": "标准",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 1000,
+      "keypoints2": 1000,
+      "matches": 1000,
+      "good_matches": 77,
+      "inlier_ratio": 0.6103896103896104,
+      "processing_time": 0.423504114151001,
+      "homography_quality": 0.00031949181997967225,
+      "match_quality_score": 0.5710033901497458
+    },
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 1000,
+        "contrast_threshold": 0.04,
+        "edge_threshold": 10,
+        "sigma": 1.6,
+        "config": "标准",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 1000,
+      "keypoints2": 1000,
+      "matches": 1000,
+      "good_matches": 122,
+      "inlier_ratio": 0.6311475409836066,
+      "processing_time": 0.3968944549560547,
+      "homography_quality": 0.00031018503204803625,
+      "match_quality_score": 0.6455145260078535
+    },
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 1000,
+        "contrast_threshold": 0.04,
+        "edge_threshold": 10,
+        "sigma": 1.6,
+        "config": "标准",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 1000,
+      "keypoints2": 1000,
+      "matches": 1000,
+      "good_matches": 191,
+      "inlier_ratio": 0.4293193717277487,
+      "processing_time": 0.40113306045532227,
+      "homography_quality": 0.0004167298981570988,
+      "match_quality_score": 0.5967467181382291
+    },
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 500,
+        "contrast_threshold": 0.05,
+        "edge_threshold": 15,
+        "sigma": 1.6,
+        "config": "快速",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 500,
+      "keypoints2": 500,
+      "matches": 500,
+      "good_matches": 52,
+      "inlier_ratio": 0.6153846153846154,
+      "processing_time": 0.40302038192749023,
+      "homography_quality": 0.0003777953944131322,
+      "match_quality_score": 0.5154924644777859
+    },
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 500,
+        "contrast_threshold": 0.05,
+        "edge_threshold": 15,
+        "sigma": 1.6,
+        "config": "快速",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 500,
+      "keypoints2": 500,
+      "matches": 500,
+      "good_matches": 82,
+      "inlier_ratio": 0.6463414634146342,
+      "processing_time": 0.38840460777282715,
+      "homography_quality": 0.00038361029263978545,
+      "match_quality_score": 0.6196196731577893
+    },
+    {
+      "algorithm": "SIFT",
+      "params": {
+        "nfeatures": 500,
+        "contrast_threshold": 0.05,
+        "edge_threshold": 15,
+        "sigma": 1.6,
+        "config": "快速",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 500,
+      "keypoints2": 500,
+      "matches": 500,
+      "good_matches": 122,
+      "inlier_ratio": 0.5901639344262295,
+      "processing_time": 0.38805532455444336,
+      "homography_quality": 0.00034026629242677993,
+      "match_quality_score": 0.6381454614985258
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 2000,
+        "scale_factor": 1.2,
+        "nlevels": 10,
+        "edge_threshold": 31,
+        "config": "高精度",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 2000,
+      "keypoints2": 2000,
+      "matches": 2000,
+      "good_matches": 39,
+      "inlier_ratio": 0.6153846153846154,
+      "processing_time": 0.22535181045532227,
+      "homography_quality": 0.00044134359010756613,
+      "match_quality_score": 0.495556923186116
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 2000,
+        "scale_factor": 1.2,
+        "nlevels": 10,
+        "edge_threshold": 31,
+        "config": "高精度",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 2000,
+      "keypoints2": 2000,
+      "matches": 2000,
+      "good_matches": 96,
+      "inlier_ratio": 0.5,
+      "processing_time": 0.04606151580810547,
+      "homography_quality": 0.00029702753090384736,
+      "match_quality_score": 0.5771082592711542
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 2000,
+        "scale_factor": 1.2,
+        "nlevels": 10,
+        "edge_threshold": 31,
+        "config": "高精度",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 2000,
+      "keypoints2": 2000,
+      "matches": 2000,
+      "good_matches": 197,
+      "inlier_ratio": 0.5076142131979695,
+      "processing_time": 0.04458022117614746,
+      "homography_quality": 0.0004038382004950595,
+      "match_quality_score": 0.6241971454277057
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 1000,
+        "scale_factor": 1.2,
+        "nlevels": 8,
+        "edge_threshold": 31,
+        "config": "标准",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 1000,
+      "keypoints2": 1000,
+      "matches": 1000,
+      "good_matches": 17,
+      "inlier_ratio": 0.7647058823529411,
+      "processing_time": 0.04140114784240723,
+      "homography_quality": 0.0003460550757030821,
+      "match_quality_score": 0.4606988756521011
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 1000,
+        "scale_factor": 1.2,
+        "nlevels": 8,
+        "edge_threshold": 31,
+        "config": "标准",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 1000,
+      "keypoints2": 1000,
+      "matches": 1000,
+      "good_matches": 46,
+      "inlier_ratio": 0.7391304347826086,
+      "processing_time": 0.03975653648376465,
+      "homography_quality": 0.0003038502730497923,
+      "match_quality_score": 0.5248072558279812
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 1000,
+        "scale_factor": 1.2,
+        "nlevels": 8,
+        "edge_threshold": 31,
+        "config": "标准",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 1000,
+      "keypoints2": 1000,
+      "matches": 1000,
+      "good_matches": 91,
+      "inlier_ratio": 0.5934065934065934,
+      "processing_time": 0.039449214935302734,
+      "homography_quality": 0.0002942655876103605,
+      "match_quality_score": 0.5986423136457456
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 500,
+        "scale_factor": 1.3,
+        "nlevels": 6,
+        "edge_threshold": 31,
+        "config": "快速",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 500,
+      "keypoints2": 500,
+      "matches": 500,
+      "good_matches": 11,
+      "inlier_ratio": 0.8181818181818182,
+      "processing_time": 0.030991315841674805,
+      "homography_quality": 0.00014523545024281513,
+      "match_quality_score": 0.40384336234557183
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 500,
+        "scale_factor": 1.3,
+        "nlevels": 6,
+        "edge_threshold": 31,
+        "config": "快速",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 500,
+      "keypoints2": 500,
+      "matches": 500,
+      "good_matches": 23,
+      "inlier_ratio": 0.6956521739130435,
+      "processing_time": 0.0319364070892334,
+      "homography_quality": 0.0003153565779930276,
+      "match_quality_score": 0.4418678429631257
+    },
+    {
+      "algorithm": "ORB",
+      "params": {
+        "nfeatures": 500,
+        "scale_factor": 1.3,
+        "nlevels": 6,
+        "edge_threshold": 31,
+        "config": "快速",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 500,
+      "keypoints2": 500,
+      "matches": 500,
+      "good_matches": 57,
+      "inlier_ratio": 0.42105263157894735,
+      "processing_time": 0.029451370239257812,
+      "homography_quality": 0.0003183291400854009,
+      "match_quality_score": 0.4349197946571992
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.0005,
+        "noctaves": 5,
+        "noctave_layers": 4,
+        "config": "高精度",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 5739,
+      "keypoints2": 5927,
+      "matches": 5739,
+      "good_matches": 450,
+      "inlier_ratio": 0.6066666666666667,
+      "processing_time": 0.3392012119293213,
+      "homography_quality": 0.000358826374964209,
+      "match_quality_score": 0.6503145791559293
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.0005,
+        "noctaves": 5,
+        "noctave_layers": 4,
+        "config": "高精度",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 5739,
+      "keypoints2": 5927,
+      "matches": 5739,
+      "good_matches": 781,
+      "inlier_ratio": 0.4801536491677337,
+      "processing_time": 0.36248040199279785,
+      "homography_quality": 0.0003422829453587011,
+      "match_quality_score": 0.5947463432747038
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.0005,
+        "noctaves": 5,
+        "noctave_layers": 4,
+        "config": "高精度",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 5739,
+      "keypoints2": 5927,
+      "matches": 5739,
+      "good_matches": 1219,
+      "inlier_ratio": 0.4446267432321575,
+      "processing_time": 0.3536720275878906,
+      "homography_quality": 0.00031572404102956454,
+      "match_quality_score": 0.5725679096017323
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.001,
+        "noctaves": 4,
+        "noctave_layers": 4,
+        "config": "标准",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 3541,
+      "keypoints2": 3729,
+      "matches": 3541,
+      "good_matches": 349,
+      "inlier_ratio": 0.5243553008595988,
+      "processing_time": 0.36344242095947266,
+      "homography_quality": 0.0003517404658840129,
+      "match_quality_score": 0.6152642601090433
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.001,
+        "noctaves": 4,
+        "noctave_layers": 4,
+        "config": "标准",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 3541,
+      "keypoints2": 3729,
+      "matches": 3541,
+      "good_matches": 569,
+      "inlier_ratio": 0.5588752196836555,
+      "processing_time": 0.3488123416900635,
+      "homography_quality": 0.0003176759985921971,
+      "match_quality_score": 0.6188528874511214
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.001,
+        "noctaves": 4,
+        "noctave_layers": 4,
+        "config": "标准",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 3541,
+      "keypoints2": 3729,
+      "matches": 3541,
+      "good_matches": 857,
+      "inlier_ratio": 0.4795799299883314,
+      "processing_time": 0.33293867111206055,
+      "homography_quality": 0.00039341976337044606,
+      "match_quality_score": 0.6098579010064664
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.002,
+        "noctaves": 3,
+        "noctave_layers": 3,
+        "config": "快速",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 1327,
+      "keypoints2": 1534,
+      "matches": 1327,
+      "good_matches": 158,
+      "inlier_ratio": 0.6835443037974683,
+      "processing_time": 0.2903120517730713,
+      "homography_quality": 0.0003680406276274369,
+      "match_quality_score": 0.6838299098072184
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.002,
+        "noctaves": 3,
+        "noctave_layers": 3,
+        "config": "快速",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 1327,
+      "keypoints2": 1534,
+      "matches": 1327,
+      "good_matches": 243,
+      "inlier_ratio": 0.5555555555555556,
+      "processing_time": 0.2574121952056885,
+      "homography_quality": 0.0004171403808025235,
+      "match_quality_score": 0.6473643364629793
+    },
+    {
+      "algorithm": "AKAZE",
+      "params": {
+        "threshold": 0.002,
+        "noctaves": 3,
+        "noctave_layers": 3,
+        "config": "快速",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 1327,
+      "keypoints2": 1534,
+      "matches": 1327,
+      "good_matches": 359,
+      "inlier_ratio": 0.5097493036211699,
+      "processing_time": 0.23303461074829102,
+      "homography_quality": 0.0003660652792758527,
+      "match_quality_score": 0.6137193052312238
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 20,
+        "octaves": 4,
+        "pattern_scale": 1.0,
+        "config": "高精度",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 11807,
+      "keypoints2": 12134,
+      "matches": 11807,
+      "good_matches": 266,
+      "inlier_ratio": 0.37969924812030076,
+      "processing_time": 0.41170644760131836,
+      "homography_quality": 4.176633145025578e-05,
+      "match_quality_score": 0.46440959868319703
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 20,
+        "octaves": 4,
+        "pattern_scale": 1.0,
+        "config": "高精度",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 11807,
+      "keypoints2": 12134,
+      "matches": 11807,
+      "good_matches": 538,
+      "inlier_ratio": 0.4070631970260223,
+      "processing_time": 0.4016551971435547,
+      "homography_quality": 0.0002704738555134399,
+      "match_quality_score": 0.5439674354644408
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 20,
+        "octaves": 4,
+        "pattern_scale": 1.0,
+        "config": "高精度",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 11807,
+      "keypoints2": 12134,
+      "matches": 11807,
+      "good_matches": 1016,
+      "inlier_ratio": 0.3720472440944882,
+      "processing_time": 0.43732213973999023,
+      "homography_quality": 0.0002887462501954037,
+      "match_quality_score": 0.5354427726964164
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 30,
+        "octaves": 3,
+        "pattern_scale": 1.0,
+        "config": "标准",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 5987,
+      "keypoints2": 6399,
+      "matches": 5987,
+      "good_matches": 179,
+      "inlier_ratio": 0.4860335195530726,
+      "processing_time": 0.23981595039367676,
+      "homography_quality": 0.000334574512843491,
+      "match_quality_score": 0.5947857616742763
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 30,
+        "octaves": 3,
+        "pattern_scale": 1.0,
+        "config": "标准",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 5987,
+      "keypoints2": 6399,
+      "matches": 5987,
+      "good_matches": 344,
+      "inlier_ratio": 0.4273255813953488,
+      "processing_time": 0.22095346450805664,
+      "homography_quality": 0.0002772440906196527,
+      "match_quality_score": 0.5541034597440353
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 30,
+        "octaves": 3,
+        "pattern_scale": 1.0,
+        "config": "标准",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 5987,
+      "keypoints2": 6399,
+      "matches": 5987,
+      "good_matches": 627,
+      "inlier_ratio": 0.4433811802232855,
+      "processing_time": 0.21207380294799805,
+      "homography_quality": 0.00030669085385386595,
+      "match_quality_score": 0.569359728245474
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 40,
+        "octaves": 2,
+        "pattern_scale": 1.2,
+        "config": "快速",
+        "ratio_threshold": 0.6
+      },
+      "keypoints1": 3030,
+      "keypoints2": 3297,
+      "matches": 3030,
+      "good_matches": 111,
+      "inlier_ratio": 0.4864864864864865,
+      "processing_time": 0.11758756637573242,
+      "homography_quality": 0.0002521725142732108,
+      "match_quality_score": 0.5702463488765578
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 40,
+        "octaves": 2,
+        "pattern_scale": 1.2,
+        "config": "快速",
+        "ratio_threshold": 0.7
+      },
+      "keypoints1": 3030,
+      "keypoints2": 3297,
+      "matches": 3030,
+      "good_matches": 188,
+      "inlier_ratio": 0.5212765957446809,
+      "processing_time": 0.11623549461364746,
+      "homography_quality": 0.00038100217178858224,
+      "match_quality_score": 0.622811289834447
+    },
+    {
+      "algorithm": "BRISK",
+      "params": {
+        "thresh": 40,
+        "octaves": 2,
+        "pattern_scale": 1.2,
+        "config": "快速",
+        "ratio_threshold": 0.8
+      },
+      "keypoints1": 3030,
+      "keypoints2": 3297,
+      "matches": 3030,
+      "good_matches": 353,
+      "inlier_ratio": 0.43342776203966005,
+      "processing_time": 0.11853241920471191,
+      "homography_quality": 0.00029868882037887483,
+      "match_quality_score": 0.5629777509295265
+    }
+  ]
+}
