@@ -1,0 +1,41 @@
+# 全景图变化检测系统依赖包
+# Panorama Change Detection System Dependencies
+
+# 基础科学计算库
+numpy>=1.19.0
+scipy>=1.7.0
+
+# 图像处理和计算机视觉
+opencv-python>=4.5.0
+scikit-image>=0.18.0
+Pillow>=8.0.0
+
+# 数据可视化
+matplotlib>=3.3.0
+seaborn>=0.11.0
+
+# 进度条和用户交互
+tqdm>=4.60.0
+
+# 数据处理
+pandas>=1.3.0
+
+# CUDA加速支持 (可选)
+# 根据CUDA版本选择其中一个:
+# cupy-cuda11x>=9.0.0    # CUDA 11.x
+# cupy-cuda12x>=12.0.0   # CUDA 12.x
+
+# 机器学习和特征处理 (可选)
+# scikit-learn>=1.0.0
+
+# 测试框架 (开发用)
+# pytest>=6.0.0
+# pytest-cov>=2.10.0
+
+# 代码质量检查 (开发用)  
+# flake8>=3.8.0
+# black>=21.0.0
+
+# 文档生成 (开发用)
+# sphinx>=4.0.0
+# sphinx-rtd-theme>=0.5.0

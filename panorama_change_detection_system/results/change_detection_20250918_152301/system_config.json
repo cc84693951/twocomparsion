@@ -1,0 +1,133 @@
+{
+  "cuda": {
+    "use_cuda": true,
+    "device_id": 0,
+    "memory_pool_cleanup": true
+  },
+  "panorama_splitter": {
+    "cube_size": 1024,
+    "interpolation_method": "bilinear",
+    "face_names": [
+      "front",
+      "right",
+      "back",
+      "left",
+      "top",
+      "bottom"
+    ],
+    "output_format": "jpg"
+  },
+  "image_preprocessor": {
+    "denoise_method": "bilateral",
+    "bilateral_d": 9,
+    "bilateral_sigma_color": 75.0,
+    "bilateral_sigma_space": 75.0,
+    "gaussian_kernel_size": 5,
+    "median_kernel_size": 5,
+    "enable_clahe": true,
+    "clahe_clip_limit": 3.0,
+    "clahe_grid_size": [
+      8,
+      8
+    ],
+    "enable_lighting_normalization": true,
+    "conservative_mode": true
+  },
+  "image_registration": {
+    "akaze_descriptor_type": 5,
+    "akaze_descriptor_size": 0,
+    "akaze_descriptor_channels": 3,
+    "akaze_threshold": 0.001,
+    "akaze_nOctaves": 4,
+    "akaze_nOctaveLayers": 4,
+    "matcher_type": "BF",
+    "match_ratio_threshold": 0.7,
+    "min_match_count": 10,
+    "ransac_threshold": 5.0,
+    "ransac_confidence": 0.99,
+    "ransac_max_iterations": 2000,
+    "mask_threshold": 10,
+    "mask_morphology_kernel_size": 5
+  },
+  "change_detector": {
+    "diff_method": "absdiff",
+    "threshold_method": "otsu",
+    "fixed_threshold": 50,
+    "morphology_operations": [
+      "close",
+      "open"
+    ],
+    "close_kernel_size": 5,
+    "open_kernel_size": 3,
+    "min_contour_area": 500,
+    "max_contour_area": 100000,
+    "min_aspect_ratio": 0.2,
+    "max_aspect_ratio": 5.0,
+    "min_extent": 0.1,
+    "bbox_padding": 5
+  },
+  "result_mapper": {
+    "enable_inverse_transform": true,
+    "interpolation_method": "bilinear",
+    "reconstruction_method": "improved",
+    "enable_boundary_handling": true
+  },
+  "visualization": {
+    "output_dpi": 150,
+    "figure_size": [
+      20,
+      15
+    ],
+    "bbox_colors": [
+      [
+        0,
+        255,
+        0
+      ],
+      [
+        255,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        255
+      ],
+      [
+        255,
+        255,
+        0
+      ],
+      [
+        255,
+        0,
+        255
+      ],
+      [
+        0,
+        255,
+        255
+      ],
+      [
+        128,
+        255,
+        0
+      ],
+      [
+        255,
+        128,
+        0
+      ]
+    ],
+    "bbox_thickness": 3,
+    "bbox_alpha": 0.3,
+    "font_scale": 0.8,
+    "font_thickness": 2,
+    "save_intermediate": true,
+    "intermediate_format": "jpg"
+  },
+  "output_root": "results",
+  "temp_dir": "temp",
+  "log_level": "INFO"
+}
