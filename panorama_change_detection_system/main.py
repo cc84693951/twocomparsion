@@ -163,10 +163,10 @@ class PanoramaChangeDetectionSystem:
                 preprocessed_faces1, aligned_faces, save_intermediate
             )
             
-            # 6. 结果映射与全景图重建
+            # 6. 结果映射与全景图重建（使用原图尺寸确保像素一致）
             final_panorama, mapped_results = self._map_results_and_reconstruct(
-                change_results, registration_info, cube_faces2, 
-                panorama2.shape[1], panorama2.shape[0], save_intermediate
+                change_results, registration_info, cube_faces1, 
+                panorama1.shape[1], panorama1.shape[0], save_intermediate
             )
             
             # 7. 生成综合报告

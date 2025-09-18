@@ -257,6 +257,9 @@ class ImageRegistration:
         # 创建有效区域掩码
         mask = self.create_valid_mask(image)
         
+        # 转换为uint8格式供OpenCV使用
+        mask = mask.astype(np.uint8) * 255
+        
         # 形态学操作清理掩码
         kernel = cv2.getStructuringElement(
             cv2.MORPH_RECT, 
@@ -264,6 +267,9 @@ class ImageRegistration:
         )
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        
+        # 转换回boolean掩码
+        mask = mask > 0
         
         # 应用掩码（将无效区域设为0）
         if len(image.shape) == 3:
@@ -387,10 +393,29 @@ class ImageRegistration:
         # 清理registration_info，使其可JSON序列化
         serializable_info = {}
         
+        def make_serializable(obj):
+            """递归转换对象为可JSON序列化格式"""
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            elif isinstance(obj, dict):
+                return {k: make_serializable(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [make_serializable(item) for item in obj]
+            elif obj is None:
+                return None
+            else:
+                return obj
+        
         for face_name, face_info in registration_info.items():
             serializable_info[face_name] = {
-                'registration_info': face_info['registration_info'],
-                'transform_matrix': face_info.get('transform_matrix', None),
+                'registration_info': make_serializable(face_info['registration_info']),
+                'transform_matrix': make_serializable(face_info.get('transform_matrix', None)),
                 'image1_shape': face_info['image1'].shape if 'image1' in face_info else None,
                 'image2_shape': face_info['image2'].shape if 'image2' in face_info else None,
                 'aligned_image_shape': face_info['aligned_image'].shape if 'aligned_image' in face_info else None

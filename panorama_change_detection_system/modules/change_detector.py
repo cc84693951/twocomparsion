@@ -73,7 +73,7 @@ class ChangeDetector:
     def detect_changes_single_pair(self, img1: np.ndarray, img2: np.ndarray, 
                                   face_name: str = "unknown") -> Dict[str, Any]:
         """
-        检测单对图像中的变化区域
+        检测单对图像中的变化区域（改进版：边缘排除+置信度过滤）
         
         Args:
             img1: 参考图像
@@ -86,22 +86,33 @@ class ChangeDetector:
         # 1. 计算图像差分
         diff_image = self.compute_image_difference(img1, img2)
         
-        # 2. 阈值分割
+        # 2. 创建边缘排除掩码（排除立方体面边缘区域）
+        edge_mask = self.create_edge_exclusion_mask(img1.shape[:2])
+        
+        # 3. 阈值分割
         binary_image, threshold_used = self.apply_threshold(diff_image)
         
-        # 3. 形态学操作
+        # 4. 应用边缘掩码，排除边缘区域
+        binary_image = binary_image & edge_mask
+        
+        # 5. 形态学操作
         processed_binary = self.apply_morphological_operations(binary_image)
         
-        # 4. 轮廓检测和过滤
+        # 6. 轮廓检测和过滤
         contours = self.detect_and_filter_contours(processed_binary)
         
-        # 5. 提取边界框
-        detections = self.extract_bounding_boxes(contours, processed_binary)
+        # 7. 提取边界框（使用改进的置信度计算）
+        detections = self.extract_bounding_boxes_improved(contours, processed_binary, diff_image, edge_mask)
         
-        # 6. 创建可视化结果
+        # 8. 应用置信度过滤（0.6以上）
+        original_count = len(detections)
+        detections = self.filter_detections_by_confidence(detections, min_confidence=0.6)
+        filtered_count = len(detections)
+        
+        # 9. 创建可视化结果
         detection_image = self.create_detection_visualization(img2, detections)
         
-        # 7. 计算统计信息
+        # 10. 计算统计信息
         stats = self.compute_detection_statistics(diff_image, binary_image, detections)
         
         result = {
@@ -114,10 +125,13 @@ class ChangeDetector:
             'detection_stats': stats,
             'threshold_used': threshold_used,
             'num_contours_found': len(contours),
-            'num_detections': len(detections)
+            'num_detections': len(detections),
+            'original_detections': original_count,
+            'filtered_detections': filtered_count,
+            'edge_mask': edge_mask
         }
         
-        logging.debug(f"{face_name}: 检测到 {len(detections)} 个变化区域，阈值: {threshold_used}")
+        logging.debug(f"{face_name}: 检测到 {original_count} 个区域，过滤后 {filtered_count} 个（置信度≥0.6），阈值: {threshold_used}")
         
         return result
     
@@ -678,6 +692,172 @@ class ChangeDetector:
         }
         
         return summary
+    
+    def create_edge_exclusion_mask(self, image_shape: Tuple[int, int], border_size: int = 30) -> np.ndarray:
+        """
+        创建边缘排除掩码，排除立方体面边缘区域的检测
+        
+        Args:
+            image_shape: 图像尺寸 (height, width)
+            border_size: 边缘排除的像素宽度
+            
+        Returns:
+            边缘排除掩码（True=有效区域，False=边缘区域）
+        """
+        height, width = image_shape
+        mask = np.ones((height, width), dtype=np.uint8) * 255
+        
+        # 排除边缘区域
+        mask[:border_size, :] = 0      # 上边缘
+        mask[-border_size:, :] = 0     # 下边缘  
+        mask[:, :border_size] = 0      # 左边缘
+        mask[:, -border_size:] = 0     # 右边缘
+        
+        # 对角落区域进行额外的圆角处理，减少更多边缘伪影
+        corner_size = min(border_size * 2, min(height, width) // 4)
+        if corner_size > border_size:
+            # 左上角
+            mask[:corner_size, :corner_size] = 0
+            # 右上角
+            mask[:corner_size, -corner_size:] = 0
+            # 左下角
+            mask[-corner_size:, :corner_size] = 0
+            # 右下角
+            mask[-corner_size:, -corner_size:] = 0
+        
+        return mask.astype(bool)
+    
+    def extract_bounding_boxes_improved(self, contours: List, binary_image: np.ndarray, 
+                                       diff_image: np.ndarray, edge_mask: np.ndarray) -> List[Dict[str, Any]]:
+        """
+        改进的边界框提取方法，使用更准确的置信度计算
+        
+        Args:
+            contours: 轮廓列表
+            binary_image: 二值化图像
+            diff_image: 差分图像
+            edge_mask: 边缘掩码
+            
+        Returns:
+            边界框信息列表
+        """
+        detections = []
+        
+        for i, contour in enumerate(contours):
+            # 计算边界矩形
+            x, y, w, h = cv2.boundingRect(contour)
+            
+            # 检查是否距离边缘太近（额外的边缘检查）
+            margin = 15
+            if (x < margin or y < margin or 
+                x + w > binary_image.shape[1] - margin or 
+                y + h > binary_image.shape[0] - margin):
+                continue  # 跳过太靠近边缘的检测
+            
+            # 添加填充
+            padding = self.config.bbox_padding
+            x_padded = max(0, x - padding)
+            y_padded = max(0, y - padding)
+            w_padded = min(binary_image.shape[1] - x_padded, w + 2 * padding)
+            h_padded = min(binary_image.shape[0] - y_padded, h + 2 * padding)
+            
+            # 计算轮廓属性
+            area = cv2.contourArea(contour)
+            perimeter = cv2.arcLength(contour, True)
+            
+            # 改进的置信度计算
+            confidence = self._calculate_improved_confidence(
+                contour, diff_image, edge_mask, x, y, w, h
+            )
+            
+            # 如果置信度太低，直接跳过
+            if confidence < 0.3:  # 预过滤极低置信度
+                continue
+            
+            # 计算中心点
+            center_x = x + w // 2
+            center_y = y + h // 2
+            
+            detection = {
+                'id': i + 1,
+                'bbox': [int(x_padded), int(y_padded), int(w_padded), int(h_padded)],
+                'bbox_original': [int(x), int(y), int(w), int(h)],
+                'area': float(area),
+                'perimeter': float(perimeter),
+                'confidence': float(confidence),
+                'center': [int(center_x), int(center_y)],
+                'contour': contour
+            }
+            
+            detections.append(detection)
+        
+        # 按置信度排序
+        detections.sort(key=lambda x: x['confidence'], reverse=True)
+        
+        # 重新分配ID
+        for i, detection in enumerate(detections):
+            detection['id'] = i + 1
+        
+        return detections
+    
+    def _calculate_improved_confidence(self, contour: np.ndarray, diff_image: np.ndarray, 
+                                     edge_mask: np.ndarray, x: int, y: int, w: int, h: int) -> float:
+        """
+        计算改进的置信度分数
+        
+        Args:
+            contour: 轮廓
+            diff_image: 差分图像
+            edge_mask: 边缘掩码
+            x, y, w, h: 边界框坐标
+            
+        Returns:
+            置信度分数 (0-1)
+        """
+        # 1. 基本几何特征
+        area = cv2.contourArea(contour)
+        bbox_area = w * h
+        extent = area / bbox_area if bbox_area > 0 else 0
+        
+        hull = cv2.convexHull(contour)
+        hull_area = cv2.contourArea(hull)
+        solidity = area / hull_area if hull_area > 0 else 0
+        
+        # 2. 差异强度特征
+        roi_diff = diff_image[y:y+h, x:x+w]
+        roi_mask = edge_mask[y:y+h, x:x+w]
+        
+        # 只考虑有效区域内的像素
+        valid_diff = roi_diff[roi_mask[y:y+h, x:x+w]] if roi_mask[y:y+h, x:x+w].any() else roi_diff
+        
+        if len(valid_diff) == 0:
+            return 0.0
+        
+        avg_diff = np.mean(valid_diff)
+        max_diff = np.max(valid_diff)
+        diff_std = np.std(valid_diff)
+        
+        # 3. 边缘距离惩罚
+        image_h, image_w = diff_image.shape
+        center_x, center_y = x + w//2, y + h//2
+        
+        # 距离边缘的最小距离
+        edge_dist = min(center_x, center_y, image_w - center_x, image_h - center_y)
+        edge_penalty = min(1.0, edge_dist / 50.0)  # 距离边缘50像素内开始惩罚
+        
+        # 4. 尺寸合理性
+        size_score = min(1.0, area / self.config.min_contour_area)
+        aspect_ratio = max(w, h) / min(w, h) if min(w, h) > 0 else 1.0
+        aspect_penalty = 1.0 / (1.0 + max(0, aspect_ratio - 3.0))  # 长宽比超过3:1开始惩罚
+        
+        # 5. 综合置信度计算
+        geometric_score = (extent * 0.3 + solidity * 0.2) * aspect_penalty
+        intensity_score = min(1.0, (avg_diff / 100.0) * 0.3 + (max_diff / 255.0) * 0.2)
+        consistency_score = min(1.0, diff_std / 30.0) * 0.1  # 差异的一致性
+        
+        confidence = (geometric_score + intensity_score + consistency_score + size_score * 0.2) * edge_penalty
+        
+        return min(1.0, max(0.0, confidence))
     
     def cleanup_memory(self):
         """清理内存"""

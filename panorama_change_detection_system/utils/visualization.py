@@ -16,9 +16,38 @@ import json
 from typing import List, Dict, Any, Tuple, Optional
 import logging
 
-# 设置中文字体
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
+# 设置中文字体 - 支持多平台
+import platform
+import matplotlib.font_manager as fm
+
+def setup_chinese_fonts():
+    """配置中文字体支持"""
+    system = platform.system()
+    
+    if system == 'Darwin':  # macOS
+        fonts = ['Heiti TC', 'PingFang SC', 'Hiragino Sans GB', 'STHeiti', 'Arial Unicode MS', 'DejaVu Sans']
+    elif system == 'Windows':  # Windows
+        fonts = ['SimHei', 'Microsoft YaHei', 'KaiTi', 'FangSong', 'STSong', 'DejaVu Sans']
+    else:  # Linux
+        fonts = ['WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', 'Noto Sans CJK SC', 'DejaVu Sans', 'Liberation Sans']
+    
+    # 尝试设置可用的字体
+    available_fonts = [f.name for f in fm.fontManager.ttflist]
+    
+    for font in fonts:
+        if font in available_fonts:
+            plt.rcParams['font.sans-serif'] = [font] + plt.rcParams['font.sans-serif']
+            print(f"使用中文字体: {font}")
+            break
+    else:
+        print("警告: 未找到合适的中文字体，中文可能显示为方块")
+        # 尝试使用系统默认字体
+        plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'DejaVu Sans', 'sans-serif']
+    
+    plt.rcParams['axes.unicode_minus'] = False
+
+# 初始化字体设置
+setup_chinese_fonts()
 
 class VisualizationUtils:
     """可视化工具类"""
